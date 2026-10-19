@@ -1,0 +1,283 @@
+# Project plan: 4 weeks
+
+Goal: a phone-friendly web app where a player records a padel stroke on a fixed camera and gets back a
+score against professional technique, with a skeleton overlay and the two or three biggest deviations.
+
+This plan replaces the earlier 15-week MATLAB plan. The technical details are in
+[design.md](design.md); data facts are in [datasets.md](datasets.md); related work is in
+[literature-review.md](literature-review.md).
+
+## 1. Read this first: course compliance
+
+`CMAI 480 - Projects.pdf` requires MATLAB as the primary environment, a camera connected to MATLAB, at
+least one from-scratch vision step, only instructor-permitted pretrained models, and individual oral
+examination of all code. It bans AI assistance (produce, complete, rewrite, debug, document) unless the
+instructor authorises it explicitly. This plan is **Python-first with a phone web app**, which the PDF
+does not allow by itself. The team reports that the instructor allows Python and AI use as long as each
+member understands the content and it stays within the project requirements.
+
+**Before week 1 ends, get this in writing from the instructor:**
+
+- [ ] Python may be the main language for pose extraction, analysis and the app (or which parts must be MATLAB).
+- [ ] AI assistance is allowed under the stated condition.
+- [ ] Which pretrained pose model is permitted.
+- [ ] A phone web app satisfies the "camera sensor connected to MATLAB" requirement, or what substitutes for it.
+- [ ] Whether the 4-week schedule replaces the weeks 14–15 demo timing.
+
+**If MATLAB is still required for part of the work**, the cheapest way to satisfy it is a small
+MATLAB track (section 9) that implements DTW from scratch, runs the simulation study and produces the
+evaluation plots from the keypoint files the Python side writes. It must be staffed from week 1; it
+cannot be added at the end.
+
+## 2. What "done" means
+
+A teammate who has never seen the code can:
+
+1. Open the web page on a phone on the same Wi-Fi as the laptop running the server.
+2. Pick hand (right/left) and stroke (forehand/backhand), record or choose a clip of one stroke.
+3. Within 60 seconds (target, not yet measured) see: an overlay video with skeleton, a score from 0 to
+   100, and the top 3 feature deviations in words.
+4. Repeat for five clips in a row without restarting the server.
+
+Plus: an evaluation on held-out professionals and deliberately flawed swings, a written failure-case
+list, and a report and demo that every member can explain.
+
+## 3. Scope
+
+| In | Out |
+|---|---|
+| Forehand and backhand (smash only in the stretch tier) | Serve, dropshot, bandeja, víbora |
+| User picks stroke type | Automatic stroke classification (stretch) |
+| One fixed camera behind the baseline, one player | Multiple players, multiple cameras |
+| Record, upload, get a result | Live scoring while playing (stretch) |
+| Score against a reference from PadelTracker100 | Coach-validated "correct/incorrect" claims (only if coach labels arrive) |
+| Laptop server plus phone browser | Native iOS or Android app |
+
+## 4. Team and ownership
+
+Four members: Najeeb, Ashen, Moaz and Ahmed. The course asks for groups of 5, so confirm with the
+instructor how a group of 4 is handled. Every member owns one area and reviews another, because every
+member is examined on all code. **This split is a first draft and can change.**
+
+| Area | Owner | Reviewer | Output |
+|---|---|---|---|
+| A. Data preparation | Najeeb | Ashen | Stroke database from PadelTracker100 |
+| B. Pose and tracking | Ashen | Moaz | Keypoints from any video, smoothed |
+| C. Features, reference, scoring | Moaz | Ahmed | Reference files and the `score_stroke` function |
+| D. Web app and server | Ahmed | Najeeb | Phone UI, API, overlay video |
+| E. Evaluation, recording, report | Shared (below) | The owner of the neighbouring area | Test clips, metrics, failure cases, report, demo |
+
+Area E is split by task so no one person carries the largest grading weight:
+
+| E task | Person |
+|---|---|
+| Filming, consent, clip log | Ahmed |
+| Evaluation protocol | Najeeb |
+| Running the evaluation and results | Moaz |
+| Report drafting and failure-case log | Ashen |
+
+The schedule tables below still show a letter (A to E) as the owner. Read it with the table above. The
+conditional MATLAB track (section 9) was written for owners C and E, now Moaz plus the evaluation tasks.
+
+Review chain: Najeeb reviews Ashen, Ashen reviews Moaz, Moaz reviews Ahmed, Ahmed reviews Najeeb.
+
+Review rule: nothing merges until its reviewer can explain it to the owner without reading the code
+aloud. This is also the oral-exam preparation.
+
+## 5. Four-week schedule
+
+Days are working days. "Done when" is a check someone else can run.
+
+### Week 1: data, poses and the first features
+
+Milestone M1 (end of week 1): the stroke database exists and the features look sensible on a sample.
+
+| Day | Owner | Task | Done when |
+|---|---|---|---|
+| 1 | A | Extract the downloaded zip into its own folder. Load both pose JSONs and shot CSVs. Print counts and compare with `datasets.md`. | Counts match: 20,100 and 20,035 CSV rows; 45,934 and 53,888 pose frames |
+| 1 | B | Install the chosen pose model; run it on the 30 MB sample clip. Time it. | Skeleton video produced; seconds-per-frame recorded in `docs/measurements.md` |
+| 1 | E | Write the filming protocol (section 8). Book the court and tripod. Draft the consent form. | Protocol and consent form committed |
+| 1 | C, D | Agree the file schemas in design.md section 3 and create the repo skeleton and empty tests. | Schemas merged; `pytest` runs (zero tests passing is fine) |
+| 2 | A | Resolve the men's file left/right keypoint question: draw keypoints on 10 video frames for each match and look. | Written answer in `datasets.md`; loader reads the correct order per match |
+| 2 | A | Group consecutive labelled frames of the same type into stroke windows. | `strokes_index.csv` with one row per window; count matches 293 forehand and 282 backhand windows |
+| 2 | B | Write the person tracker for pose JSONs (match players across frames by hip-centre distance). | Each of the four players gets a stable track over a 1,000-frame sample, checked by eye |
+| 3 | A | Infer the hitter per window: the track whose dominant-side wrist speed peaks highest, or for left/right unknown, whichever wrist is faster. | 40 windows hand-checked against video; accuracy recorded |
+| 3 | A | Estimate each pro's handedness from the hitter's fast wrist across their forehands. | A table of 8 players with a handedness and the evidence |
+| 3 | C | Implement the features (design.md section 4) on synthetic keypoints with known angles. | Unit tests pass: a straight arm gives 180°, a right angle gives 90° |
+| 4 | A | Estimate the contact frame per window from the wrist-speed peak. Compare with video on 30 windows. | Median contact error in frames recorded; goes into `datasets.md` |
+| 4 | A | Decide the camera-side filter: keep only players on the near side of the court (seen from behind), see design.md section 5. | Decision recorded with a sample image per side |
+| 4 | B | Run pose on three 10-second phone clips from the team (any court). Measure keypoint availability. | Report: % frames where dominant arm keypoints have confidence at least 0.5 |
+| 5 | C | Compute features for every near-side stroke window; plot per-feature curves for 20 forehands over each other. | Plot looks like a coherent family of curves, not noise |
+| 5 | E | Draft the evaluation protocol (section 7) with numeric starting targets. | Protocol merged and agreed by all five |
+| 5 | all | M1 review: each owner explains their code to their reviewer. | Five sign-offs |
+
+### Week 2: reference, DTW scoring and first validation
+
+Milestone M2 (end of week 2): `score_stroke` runs and separates held-out pros from flawed swings, at least
+on simulated or hand-made data.
+
+| Day | Owner | Task | Done when |
+|---|---|---|---|
+| 6 | C | Implement DTW (cost matrix, accumulation, backtracking) in plain numpy. | Output matches a hand-worked 5×5 example in a unit test |
+| 6 | C | Anchor strokes at contact and resample each to 60 steps. | A stroke plotted before and after resampling overlays correctly |
+| 7 | C | Build the reference: align all strokes of a type to a medoid with DTW; store mean and standard deviation per step per feature. | `reference/forehand.npz` and `backhand.npz` with shapes in the design |
+| 7 | A | Hold out players: split the 8 pros into build set and test set for leave-players-out evaluation. | `splits.json` committed; no player in both sides |
+| 8 | C | Implement scoring (design.md section 6) and the feedback sentences. | Given a pro stroke, returns a score and three ranked deviations |
+| 8 | E | Create flawed test strokes by editing real ones: add a fixed offset to one feature (for example reduce the elbow angle by 20°). | Script produces five fault types per held-out stroke |
+| 9 | E | Run the first evaluation: held-out pro strokes vs flawed strokes. Report separation. | Table and one plot in `docs/results.md`; if separation is weak, record why |
+| 9 | B | Run the pose model on about 50 pro stroke windows from the video, compute features, compare with the dataset-pose features. | Per-feature mean difference reported. This decides whether the reference uses dataset poses or re-run poses |
+| 10 | C | Act on that comparison. If the gap is large, re-run poses on all near-side stroke windows and rebuild the reference. | Reference rebuilt or the decision not to is recorded with the numbers |
+| 10 | D | Build the minimal server: upload endpoint that returns a hard-coded result. Open it from a phone. | A phone on the same Wi-Fi gets the JSON |
+| 10 | all | M2 review. | Five sign-offs |
+
+### Week 3: end-to-end with real video
+
+Milestone M3 (end of week 3): record on a phone, get a real score and overlay.
+
+| Day | Owner | Task | Done when |
+|---|---|---|---|
+| 11 | B | Pipeline for a player clip: decode video, run pose, pick the single player, smooth keypoints, fill short gaps. | One command turns an `.mp4` into a keypoint file |
+| 11 | C | Swing detection on player clips: wrist-speed peaks, windowing around contact. | On a test clip with 5 known swings, finds 5 |
+| 12 | C | Wire detection, features, reference and scoring into `analyze_clip(video, hand, stroke)`. | Returns the result structure from design.md section 3 |
+| 12 | D | Overlay renderer: skeleton, stroke label, score, drawn on every frame; encode H.264 so phones can play it. | Overlay plays on a phone browser |
+| 13 | D | Wire the server to `analyze_clip`; run it as a background job with a progress status. | Phone upload returns a job id; polling shows progress; final result shows overlay and text |
+| 13 | E | Film the first real sessions with consent: the protocol clips (section 8). | At least 20 clips per stroke from at least 2 players, logged in `clips.csv` |
+| 14 | E | Run the app on the real clips; log every failure with a screenshot. | `docs/failures.md` with at least 15 entries categorised |
+| 14 | B | Fix the top two pose failures (for example the wrong person selected, dropped frames). | Re-run shows the failures fixed or documented as not fixable |
+| 15 | C | Tune the scoring weights using only the build set, not the test set. | Weights fixed and committed before the final evaluation |
+| 15 | all | M3 review and a full demo rehearsal on a phone. | Demo completes without restarting the server |
+
+### Week 4: evaluation, hardening and delivery
+
+Milestone M4 (end of week 4): final evaluation, report, demo.
+
+| Day | Owner | Task | Done when |
+|---|---|---|---|
+| 16 | E | Final evaluation on the held-out pros and on the team's own clips, with the fixed weights. | `docs/results.md` complete with all metrics from section 7 |
+| 16 | D | Error handling: no person found, several people, clip too short, wrong orientation, upload failure. | Each case shows a readable message, not a crash |
+| 17 | B | Speed pass: measure per-stage time; remove the worst bottleneck. | Latency table before and after in `docs/measurements.md` |
+| 17 | C | Explainability pass: make sure every feedback sentence names a feature, a direction and a size. | Ten sample feedback outputs read by the whole team |
+| 18 | all | Freeze features. Only bug fixes after this point. | Tag `v1.0` |
+| 18 | E | Write the report sections from results and the literature review. | First full draft |
+| 19 | all | Dry-run the oral exam: each member explains and live-modifies a module they did not write. | Each member passes; gaps get another day |
+| 19 | D | Demo script and a recorded backup demo. | Backup video exists |
+| 20 | all | Final report and presentation; clean the repo; confirm nothing large or private is committed. | Submission package complete |
+
+### Stretch tier (only if a milestone finishes early)
+
+In priority order:
+
+1. Smash as a third stroke.
+2. A swing-type classifier so the user does not choose the stroke.
+3. Live mode: stream frames and score each stroke as it finishes.
+4. A coach rating session on 30 clips to calibrate the pass/fail threshold.
+5. Ball tracking and shot speed.
+
+## 6. Dependencies and critical path
+
+```
+decision on pose model ──► B day 1 ──► B day 4 ──► B day 11 ──► C day 12 ──► D day 13 ──► demo
+A data (days 1–4) ──► C features (day 5) ──► reference (day 7) ──► scoring (day 8) ──► C day 12
+E filming (day 13) ──► evaluation (day 16)
+```
+
+The critical path runs through data preparation and the pose model. If either slips by two days, use
+the cut list in section 10 immediately rather than hoping to catch up.
+
+## 7. Evaluation protocol
+
+These are **starting targets**, to be revised after week 1 data shows what is realistic. Agree them before
+running experiments, and do not change them after seeing test results.
+
+| What | Method | Starting target |
+|---|---|---|
+| Swing detection | Peaks within a dataset-labelled window (plus or minus 3 frames) count as hits, otherwise false alarms; measure on pros | Recall at least 0.8, precision at least 0.7 |
+| Contact estimate | Compare with hand-marked contact on 30 pro windows | Median error at most 3 frames |
+| Pose availability | Share of frames with confident dominant-arm keypoints on our clips | At least 90% |
+| Score separation | Leave-players-out: held-out pro strokes vs their flawed copies; report the area under the ROC curve | At least 0.8 |
+| Fault sensitivity | Per fault type (elbow, rotation, knee, wrist height, timing): smallest offset that changes the score by a set amount | Report, no target |
+| Real-player sanity | Teammates' deliberate good form vs deliberate faults on camera | Faults score lower on average, report effect size |
+| Latency | Seconds from upload finish to result for a 10-second clip | At most 60 s (laptop) |
+| Failure rate | Share of clips ending in an error or unusable result | Report |
+
+Notes:
+- Flawed copies are synthetic edits of real strokes, so passing this test shows the score reacts to
+  changes in the features it uses. It does not show the score matches a coach's judgement.
+- Only a coach rating can support a claim that a stroke is "right" or "wrong". Without it, results are
+  phrased as "similarity to professional technique".
+
+## 8. Filming protocol
+
+- **Camera:** phone on a tripod, landscape, 1080p, 30 fps (60 fps if the phone supports it and storage
+  allows), exposure and focus locked.
+- **Position:** behind the baseline on the centre line, as high as the tripod or a fence allows. The player
+  hits from the near half of the court, seen from behind, like the near-side players in the pro footage.
+- **Framing:** the whole body, racket and about 1 m of margin stay in view for the whole swing.
+- **Record per clip:** player ID, handedness, stroke, camera height and distance, date, and whether the
+  swing was good form or a deliberate fault (and which).
+- **Per session:** 10 forehands and 10 backhands in good form; 5 of each with a named fault (elbow too low,
+  no shoulder turn, contact too late, no knee bend, arm too straight).
+- **Consent:** each filmed person signs before filming. Raw video is stored privately, not in git. Only
+  keypoints and skeleton overlays leave the team.
+- **Do not** change camera position within a session.
+
+## 9. Conditional MATLAB track
+
+Needed only if the instructor requires MATLAB work. Staff it from week 1 with owners C and E.
+
+| Task | Week | Output |
+|---|---|---|
+| DTW from first principles (cost matrix, accumulation, backtracking), checked against the Python result on the same inputs | 2 | `dtw_scratch.m` and a comparison table |
+| Synthetic stroke simulator: parametrised swing, noise, virtual camera projection | 2–3 | Sensitivity plots (offset vs score, noise vs score, camera angle vs score) |
+| Evaluation plots from the Python keypoint and score files | 4 | Figures for the report |
+
+The Python and MATLAB sides meet through files only (`.npz` converted to `.mat` or `.csv`).
+
+## 10. Risk register and cut list
+
+| Risk | Warning sign | Response |
+|---|---|---|
+| Pro reference is a poor fit for our camera view | Feature curves from our clips lie far outside the pro spread on good swings | Lower the number of features used; widen ranges; keep the claim to "relative to pros" |
+| Dataset poses differ from our pose model | Day 9 comparison shows large feature gaps | Re-run our model on pro windows (about 600 windows, short) |
+| Hitter or contact inference is wrong too often | Day 3–4 hand checks below 80% | Restrict to windows where one near-side player clearly dominates the motion |
+| Pose fails on fast swings or motion blur | Many dropped wrist keypoints | Raise fps to 60; interpolate gaps up to 3 frames; document the limit |
+| Processing is too slow | Over 60 s for 10 s of video | Process only the swing window, lower resolution, skip frames outside it |
+| Phone cannot reach the server | Upload fails on the venue Wi-Fi | Fall back to a laptop hotspot; keep a recorded demo |
+| Filming slips | No clips by day 13 | Film on any available court or indoors; weaken the camera-match claim |
+| A member is unavailable | Owner absent for two days | Reviewer takes over; this is why reviewers exist |
+| Left/right swap mishandled | Handedness wrong for many pros | Day 2 check; do not proceed to features until settled |
+
+**Cut order if behind** (drop from the top first):
+
+1. Stretch tier.
+2. Smash.
+3. Backhand (ship forehand only).
+4. Overlay video (return the score and text only).
+5. Per-feature feedback (return the score only).
+
+The minimum viable result: forehand score against the pro reference, validated on held-out pros and
+flawed copies. Everything else is optional.
+
+## 11. Report outline (maps to the rubric)
+
+| Section | Rubric weight | Source |
+|---|---|---|
+| Problem, background, ethics, success criteria | 10% | [literature-review.md](literature-review.md), section 7 above |
+| Method and implementation | 20% | [design.md](design.md), plus the from-scratch DTW explained |
+| Results, analysis, performance, failure cases | 30% | `docs/results.md`, `docs/failures.md`, `docs/measurements.md` |
+| Report quality and presentation | 20% | Figures from the evaluation, clear structure |
+| Teamwork and milestones | 10% | Git history, five sign-offs per milestone, ownership table |
+| Creativity and oral defence | 10% | Phone app demo, live modification drill (day 19) |
+
+Results carry the most weight, so the evaluation protocol is fixed in week 1 and run once, at the end.
+
+## 12. Open decisions
+
+- [ ] Written answers from the instructor (section 1).
+- [ ] Which pose model (accuracy against speed; the dataset's own poses were made with ViTPose and a
+  COCO-17 output is needed).
+- [ ] Which near-side camera-side rule to use (day 4).
+- [ ] Whether to keep the shoulder angle as a feature, since the literature shows it is the least reliable joint
+  from 2D.
+- [ ] Footage rights for the pro match video before any of it appears in the demo or report.
+- [ ] Confirm the draft ownership split in section 4, and how a group of 4 is handled.
