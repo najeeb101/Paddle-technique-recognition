@@ -1,7 +1,8 @@
 # Project plan: 4 weeks
 
-Goal: a phone-friendly web app where a player records a padel stroke on a fixed camera and gets back a
-score against professional technique, with a skeleton overlay and the two or three biggest deviations.
+Goal: a phone-friendly web app where a player records one forehand or backhand on a single fixed camera
+and gets back an explainable similarity score against a carefully filtered professional reference, with
+confidence indicators, failure reporting, a skeleton overlay, and the two or three biggest deviations.
 
 This plan replaces the earlier 15-week MATLAB plan. The technical details are in
 [design.md](design.md); data facts are in [datasets.md](datasets.md); related work is in
@@ -25,7 +26,7 @@ member understands the content and it stays within the project requirements.
 - [ ] Whether the 4-week schedule replaces the weeks 14–15 demo timing.
 
 **If MATLAB is still required for part of the work**, the cheapest way to satisfy it is a small
-MATLAB track (section 9) that implements DTW from scratch, runs the simulation study and produces the
+MATLAB track (section 10) that implements DTW from scratch, runs the simulation study and produces the
 evaluation plots from the keypoint files the Python side writes. It must be staffed from week 1; it
 cannot be added at the end.
 
@@ -35,9 +36,10 @@ A teammate who has never seen the code can:
 
 1. Open the web page on a phone on the same Wi-Fi as the laptop running the server.
 2. Pick hand (right/left) and stroke (forehand/backhand), record or choose a clip of one stroke.
-3. Within 60 seconds (target, not yet measured) see: an overlay video with skeleton, a score from 0 to
-   100, and the top 3 feature deviations in words.
-4. Repeat for five clips in a row without restarting the server.
+3. Within 60 seconds (target, not yet measured) see an overlay video with skeleton, a similarity score
+   from 0 to 100, confidence indicators, and the top three feature deviations in words.
+4. If analysis is unreliable, see an explicit failure reason instead of a misleading score.
+5. Repeat for five clips in a row without restarting the server.
 
 Plus: an evaluation on held-out professionals and deliberately flawed swings, a written failure-case
 list, and a report and demo that every member can explain.
@@ -46,11 +48,11 @@ list, and a report and demo that every member can explain.
 
 | In | Out |
 |---|---|
-| Forehand and backhand (smash only in the stretch tier) | Serve, dropshot, bandeja, víbora |
-| User picks stroke type | Automatic stroke classification (stretch) |
+| User-selected forehand and backhand | Smash, serve, dropshot, bandeja, víbora |
+| One fixed camera behind the baseline, one player | Automatic stroke classification |
 | One fixed camera behind the baseline, one player | Multiple players, multiple cameras |
-| Record, upload, get a result | Live scoring while playing (stretch) |
-| Score against a reference from PadelTracker100 | Coach-validated "correct/incorrect" claims (only if coach labels arrive) |
+| Record, upload, get a result | Live scoring, ball tracking, shot speed |
+| Score against a carefully filtered near-side reference from PadelTracker100 | Coach-validated "correct/incorrect" claims |
 | Laptop server plus phone browser | Native iOS or Android app |
 
 ## 4. Team and ownership
@@ -77,7 +79,7 @@ Area E is split by task so no one person carries the largest grading weight:
 | Report drafting and failure-case log | Ashen |
 
 The schedule tables below still show a letter (A to E) as the owner. Read it with the table above. The
-conditional MATLAB track (section 9) was written for owners C and E, now Moaz plus the evaluation tasks.
+conditional MATLAB track (section 10) was written for owners C and E, now Moaz plus the evaluation tasks.
 
 Review chain: Najeeb reviews Ashen, Ashen reviews Moaz, Moaz reviews Ahmed, Ahmed reviews Najeeb.
 
@@ -96,7 +98,7 @@ Milestone M1 (end of week 1): the stroke database exists and the features look s
 |---|---|---|---|
 | 1 | A | Extract the downloaded zip into its own folder. Load both pose JSONs and shot CSVs. Print counts and compare with `datasets.md`. | Counts match: 20,100 and 20,035 CSV rows; 45,934 and 53,888 pose frames |
 | 1 | B | Install the chosen pose model; run it on the 30 MB sample clip. Time it. | Skeleton video produced; seconds-per-frame recorded in `docs/measurements.md` |
-| 1 | E | Write the filming protocol (section 8). Book the court and tripod. Draft the consent form. | Protocol and consent form committed |
+| 1 | E | Write the filming protocol (section 9). Book the court and tripod. Draft the consent form. | Protocol and consent form committed |
 | 1 | C, D | Agree the file schemas in design.md section 3 and create the repo skeleton and empty tests. | Schemas merged; `pytest` runs (zero tests passing is fine) |
 | 2 | A | Resolve the men's file left/right keypoint question: draw keypoints on 10 video frames for each match and look. | Written answer in `datasets.md`; loader reads the correct order per match |
 | 2 | A | Group consecutive labelled frames of the same type into stroke windows. | `strokes_index.csv` with one row per window; count matches 293 forehand and 282 backhand windows |
@@ -108,13 +110,13 @@ Milestone M1 (end of week 1): the stroke database exists and the features look s
 | 4 | A | Decide the camera-side filter: keep only players on the near side of the court (seen from behind), see design.md section 5. | Decision recorded with a sample image per side |
 | 4 | B | Run pose on three 10-second phone clips from the team (any court). Measure keypoint availability. | Report: % frames where dominant arm keypoints have confidence at least 0.5 |
 | 5 | C | Compute features for every near-side stroke window; plot per-feature curves for 20 forehands over each other. | Plot looks like a coherent family of curves, not noise |
-| 5 | E | Draft the evaluation protocol (section 7) with numeric starting targets. | Protocol merged and agreed by all five |
+| 5 | E | Draft the evaluation protocol (section 8) with numeric starting targets. | Protocol merged and agreed by all five |
 | 5 | all | M1 review: each owner explains their code to their reviewer. | Five sign-offs |
 
 ### Week 2: reference, DTW scoring and first validation
 
-Milestone M2 (end of week 2): `score_stroke` runs and separates held-out pros from flawed swings, at least
-on simulated or hand-made data.
+Milestone M2 (end of week 2): `score_stroke` runs and reports similarity, confidence, and explicit
+quality failures on held-out professional and synthetic test strokes.
 
 | Day | Owner | Task | Done when |
 |---|---|---|---|
@@ -141,7 +143,7 @@ Milestone M3 (end of week 3): record on a phone, get a real score and overlay.
 | 12 | C | Wire detection, features, reference and scoring into `analyze_clip(video, hand, stroke)`. | Returns the result structure from design.md section 3 |
 | 12 | D | Overlay renderer: skeleton, stroke label, score, drawn on every frame; encode H.264 so phones can play it. | Overlay plays on a phone browser |
 | 13 | D | Wire the server to `analyze_clip`; run it as a background job with a progress status. | Phone upload returns a job id; polling shows progress; final result shows overlay and text |
-| 13 | E | Film the first real sessions with consent: the protocol clips (section 8). | At least 20 clips per stroke from at least 2 players, logged in `clips.csv` |
+| 13 | E | Film the first real sessions with consent: the protocol clips (section 9). | At least 20 clips per stroke from at least 2 players, logged in `clips.csv` |
 | 14 | E | Run the app on the real clips; log every failure with a screenshot. | `docs/failures.md` with at least 15 entries categorised |
 | 14 | B | Fix the top two pose failures (for example the wrong person selected, dropped frames). | Re-run shows the failures fixed or documented as not fixable |
 | 15 | C | Tune the scoring weights using only the build set, not the test set. | Weights fixed and committed before the final evaluation |
@@ -153,7 +155,7 @@ Milestone M4 (end of week 4): final evaluation, report, demo.
 
 | Day | Owner | Task | Done when |
 |---|---|---|---|
-| 16 | E | Final evaluation on the held-out pros and on the team's own clips, with the fixed weights. | `docs/results.md` complete with all metrics from section 7 |
+| 16 | E | Final evaluation on the held-out pros and on the team's own clips, with the fixed weights. | `docs/results.md` complete with all metrics from section 8 |
 | 16 | D | Error handling: no person found, several people, clip too short, wrong orientation, upload failure. | Each case shows a readable message, not a crash |
 | 17 | B | Speed pass: measure per-stage time; remove the worst bottleneck. | Latency table before and after in `docs/measurements.md` |
 | 17 | C | Explainability pass: make sure every feedback sentence names a feature, a direction and a size. | Ten sample feedback outputs read by the whole team |
@@ -165,7 +167,8 @@ Milestone M4 (end of week 4): final evaluation, report, demo.
 
 ### Stretch tier (only if a milestone finishes early)
 
-In priority order:
+These are not part of the MVP and must not delay the required forehand/backhand pipeline. In priority
+order:
 
 1. Smash as a third stroke.
 2. A swing-type classifier so the user does not choose the stroke.
@@ -173,7 +176,48 @@ In priority order:
 4. A coach rating session on 30 clips to calibrate the pass/fail threshold.
 5. Ball tracking and shot speed.
 
-## 6. Dependencies and critical path
+## 6. Long-term product roadmap
+
+The four-week project is a validated technical foundation, not the complete product. The long-term
+ambition is to develop a professional performance-analysis platform that could be evaluated for use by
+high-performance organizations such as Aspire Academy in Qatar. The prototype must earn that ambition
+through evidence; it should not imply that the MVP is ready for professional decision-making.
+
+### Phase 1: Validate the foundation
+
+- Test the user-selected forehand/backhand workflow with players and coaches.
+- Measure usefulness, repeatability, confidence calibration, and failure rates.
+- Confirm that feedback is understandable and does not turn similarity into a “correct/incorrect”
+  judgement.
+- Resolve professional-footage licensing, consent, retention, and access controls.
+
+### Phase 2: Build a stronger reference
+
+- Collect or license more professional footage with clear provenance.
+- Include multiple players, handedness, body types, styles, camera positions, and match contexts.
+- Add coach-labelled examples to calibrate feedback and validate whether deviations matter in practice.
+- Maintain player-level and session-level evaluation splits to prevent data leakage.
+
+### Phase 3: Expand analysis
+
+- Add smash, serve, bandeja, víbora, dropshot, and other relevant padel strokes.
+- Automatically detect stroke type and improve hitter and contact-frame estimation.
+- Support longer sessions, multiple players, court-aware tracking, and robust camera calibration.
+- Add ball and racket tracking, shot timing, placement, and speed where accuracy is sufficient.
+
+### Phase 4: Professional academy platform
+
+- Provide coach dashboards, athlete profiles, longitudinal progress, session comparison, and drill
+  recommendations.
+- Support secure team deployment, role-based access, consent and deletion workflows, and audit logs.
+- Integrate coach review so automated feedback supports—not replaces—professional expertise.
+- Run prospective validation with academy players before using the system in training decisions.
+
+The roadmap is intentionally gated: each phase depends on validation and data quality from the previous
+phase. A professional deployment would require additional technical, ethical, legal, and operational
+review beyond this course project.
+
+## 7. Dependencies and critical path
 
 ```
 decision on pose model ──► B day 1 ──► B day 4 ──► B day 11 ──► C day 12 ──► D day 13 ──► demo
@@ -182,9 +226,9 @@ E filming (day 13) ──► evaluation (day 16)
 ```
 
 The critical path runs through data preparation and the pose model. If either slips by two days, use
-the cut list in section 10 immediately rather than hoping to catch up.
+the cut list in section 11 immediately rather than hoping to catch up.
 
-## 7. Evaluation protocol
+## 8. Evaluation protocol
 
 These are **starting targets**, to be revised after week 1 data shows what is realistic. Agree them before
 running experiments, and do not change them after seeing test results.
@@ -206,7 +250,7 @@ Notes:
 - Only a coach rating can support a claim that a stroke is "right" or "wrong". Without it, results are
   phrased as "similarity to professional technique".
 
-## 8. Filming protocol
+## 9. Filming protocol
 
 - **Camera:** phone on a tripod, landscape, 1080p, 30 fps (60 fps if the phone supports it and storage
   allows), exposure and focus locked.
@@ -221,7 +265,7 @@ Notes:
   keypoints and skeleton overlays leave the team.
 - **Do not** change camera position within a session.
 
-## 9. Conditional MATLAB track
+## 10. Conditional MATLAB track
 
 Needed only if the instructor requires MATLAB work. Staff it from week 1 with owners C and E.
 
@@ -233,7 +277,7 @@ Needed only if the instructor requires MATLAB work. Staff it from week 1 with ow
 
 The Python and MATLAB sides meet through files only (`.npz` converted to `.mat` or `.csv`).
 
-## 10. Risk register and cut list
+## 11. Risk register and cut list
 
 | Risk | Warning sign | Response |
 |---|---|---|
@@ -250,19 +294,19 @@ The Python and MATLAB sides meet through files only (`.npz` converted to `.mat` 
 **Cut order if behind** (drop from the top first):
 
 1. Stretch tier.
-2. Smash.
-3. Backhand (ship forehand only).
-4. Overlay video (return the score and text only).
-5. Per-feature feedback (return the score only).
+2. Overlay video (return the score and text only).
+3. Per-feature feedback (return the score and confidence only).
+4. Backhand (ship forehand only, while preserving the user-selected stroke contract).
 
-The minimum viable result: forehand score against the pro reference, validated on held-out pros and
-flawed copies. Everything else is optional.
+The minimum viable result: user-selected forehand similarity against the filtered professional reference,
+with confidence and failure reporting, validated on held-out professionals and synthetic perturbations.
+Backhand is the second required stroke and should be included unless the documented cut list is invoked.
 
-## 11. Report outline (maps to the rubric)
+## 12. Report outline (maps to the rubric)
 
 | Section | Rubric weight | Source |
 |---|---|---|
-| Problem, background, ethics, success criteria | 10% | [literature-review.md](literature-review.md), section 7 above |
+| Problem, background, ethics, success criteria | 10% | [literature-review.md](literature-review.md), sections 1, 4 and 5 |
 | Method and implementation | 20% | [design.md](design.md), plus the from-scratch DTW explained |
 | Results, analysis, performance, failure cases | 30% | `docs/results.md`, `docs/failures.md`, `docs/measurements.md` |
 | Report quality and presentation | 20% | Figures from the evaluation, clear structure |
@@ -271,7 +315,7 @@ flawed copies. Everything else is optional.
 
 Results carry the most weight, so the evaluation protocol is fixed in week 1 and run once, at the end.
 
-## 12. Open decisions
+## 13. Open decisions
 
 - [ ] Written answers from the instructor (section 1).
 - [ ] Which pose model (accuracy against speed; the dataset's own poses were made with ViTPose and a

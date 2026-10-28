@@ -11,9 +11,9 @@ assessment, measurable success criteria and a clear scope.
 ## 1. Problem definition
 
 Padel players improve by getting feedback on technique, but that normally needs a coach present. We
-propose a camera-based system that estimates a player's body pose during forehand, backhand and smash
-strokes, measures how the stroke differs from professional players' strokes, and reports which body
-movements differ.
+propose a camera-based system that estimates a player's body pose during user-selected forehand and
+backhand strokes, measures how the stroke differs from professional players' strokes, and reports which
+body movements differ.
 
 **Core question:** can 2D pose from a single fixed camera support a meaningful, explainable comparison
 between a player's stroke and professional strokes?
@@ -26,10 +26,10 @@ technique quality (see [datasets.md](datasets.md)).
 
 | In scope | Out of scope |
 |---|---|
-| Forehand, backhand, smash | Serve, dropshot, bandeja, víbora |
+| User-selected forehand and backhand | Smash, serve, dropshot, bandeja, víbora |
 | Single fixed camera, one player at a time | Multi-camera 3D, multi-player analysis |
 | Similarity to professional range, per-feature feedback | Injury risk, medical advice, match tactics |
-| Recorded and live video | Ball speed and placement |
+| Recorded video uploaded from a phone | Live scoring, ball speed and placement |
 
 ## 2. Related work
 
@@ -90,9 +90,9 @@ padel stroke-classification paper appeared.
   but in our searches no published system scores a padel player's technique against professionals.
 - Tennis and other sports show pose-plus-DTW comparison works in principle, but it has not been tried on
   padel footage, whose camera angle and glass walls differ.
-- Our contribution is a padel-specific, explainable pipeline with a from-scratch DTW, an evaluation of how
-  well the score separates good from deliberately flawed strokes, and a simulation study of how camera
-  position affects the result.
+-   Our contribution is a padel-specific, explainable pipeline with a from-scratch DTW, an evaluation of
+  similarity and confidence on user-selected forehand and backhand clips, and an explicit analysis of
+  failure cases caused by pose quality, camera position, and limited professional-reference coverage.
 
 We have not done an exhaustive search. A claim of novelty in the report needs a proper search first
 (for example Google Scholar, IEEE Xplore and arXiv for "padel" combined with pose, technique or DTW).
@@ -116,10 +116,11 @@ Proposed targets are listed in [project-plan.md](project-plan.md). The team shou
 experiments start, so results are not fitted afterwards. Suggested metrics:
 
 - stroke detection precision and recall against the dataset's shot labels, per stroke type
-- stroke classification accuracy and confusion matrix, evaluated with players held out
 - keypoint availability on our own camera
-- separation between held-out professional strokes and deliberately flawed strokes by a teammate
+- similarity separation between held-out professional strokes and synthetic perturbations or deliberately
+  flawed teammate strokes
 - processing time per frame
+- confidence and failure rates
 
 ## 6. References
 

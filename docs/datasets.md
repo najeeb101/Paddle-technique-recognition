@@ -83,7 +83,7 @@ top-down methods most accurate for single-angle padel video, which informs the c
 
 No public padel dataset labels technique quality, so these do not exist and have to be recorded:
 
-1. **Player clips** from the target fixed camera setup, covering forehand, backhand and smash.
+1. **Player clips** from the target fixed camera setup, covering forehand and backhand.
 2. **Coach ratings** (for example correct / needs work, plus the fault) on a subset of those clips.
    These calibrate the score thresholds and are the only way to measure whether the system's verdicts
    are right.

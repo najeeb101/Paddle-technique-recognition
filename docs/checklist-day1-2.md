@@ -37,8 +37,9 @@ building on it.
 - [ ] **A4. Count labelled strokes.** Group consecutive frames with the same category into one window.
   Expected windows per category, women's plus men's: Forehand 293, Backhand 282, Smash 216, Serve 73,
   Other 68, Dropshot 5.
-- [ ] **A5. Print the window lengths** per category. Expected medians (frames), FinalF then FinalM:
-  forehand 14 and 10, backhand 13 and 10, smash 17 and 13, serve 28 and 23.
+- [ ] **A5. Print the window lengths** for the supported categories. Expected medians (frames),
+  FinalF then FinalM: forehand 14 and 10, backhand 13 and 10. Record smash and serve only as dataset
+  facts; they are outside the MVP.
 - [ ] **A6. Record any mismatch** in the Findings box.
 
 Done when: all counts match, or every difference is explained.
@@ -82,7 +83,7 @@ Done when: the phone shows the page and an uploaded clip arrives on the laptop.
 
 ### E. Evaluation, recording and report: protocol and consent
 
-- [ ] **E1. Read the filming protocol** (`project-plan.md` section 8) and change anything that is unrealistic
+- [ ] **E1. Read the filming protocol** (`project-plan.md` section 9) and change anything that is unrealistic
   for your court and equipment.
 - [ ] **E2. Find a court and a time** for filming in week 2 or early week 3. Confirm tripod height options.
 - [ ] **E3. Write the consent form**: who is filmed, what is stored (raw video, keypoints, overlays), how long,
@@ -160,13 +161,13 @@ Done when: a phone can upload a clip, watch progress and see the placeholder res
 
 ### E. Evaluation and report: prepare the checks
 
-- [ ] **E6. Write the evaluation protocol draft** (`project-plan.md` section 7): confirm each metric is
+- [ ] **E6. Write the evaluation protocol draft** (`project-plan.md` section 8): confirm each metric is
   measurable with the data you will actually have.
 - [ ] **E7. Write the hand-check sheets** for days 3 and 4: a table with columns `stroke_id`, frame, what to
   look for, verdict. Fill the stroke IDs from `strokes_index.csv` once A8 is done: 40 for the hitter check
   and 30 for the contact check.
 - [ ] **E8. Test the consent and clip log** by filling them in for one practice recording of a teammate.
-- [ ] **E9. Start the report outline** from `project-plan.md` section 11 as a document, with each heading
+- [ ] **E9. Start the report outline** from `project-plan.md` section 12 as a document, with each heading
   assigned to a member.
 
 Done when: the sheets exist and the outline has owners.
@@ -175,7 +176,7 @@ Done when: the sheets exist and the outline has owners.
 
 - [ ] Each owner demonstrates their result to their reviewer, who must be able to say what it does and
   why without reading the code line by line. This is the same skill as the oral exam.
-- [ ] Update the Findings box and the open decisions in `project-plan.md` section 12.
+- [ ] Update the Findings box and the open decisions in `project-plan.md` section 13.
 - [ ] Read the day 3 and 4 tasks and check nothing there is blocked by something unfinished.
 
 ## Findings (fill in as you go)

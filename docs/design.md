@@ -15,9 +15,13 @@ phone browser ──upload──► server (Python) ──► pose ──► tra
                   PadelTracker100 ──► stroke database ──► reference build (offline)
 ```
 
+The MVP supports two user-selected stroke types: forehand and backhand. It does not attempt automatic
+stroke classification.
+
 Two separate flows share the same feature and scoring code:
 
-- **Offline build (once):** turn PadelTracker100 into a stroke database, then a reference per stroke type.
+- **Offline build (once):** turn PadelTracker100 into a stroke database, then references for the supported
+  forehand and backhand types.
 - **Online analysis (per clip):** turn a phone video into keypoints, find the stroke, score it.
 
 Sharing one implementation of the features is important: if the reference and the player are computed by
@@ -29,15 +33,15 @@ different code, any mismatch looks like a technique difference.
 |---|---|---|---|
 | Language | Python 3.10+ | Pose models and web servers are easiest here | MATLAB for some parts if the course requires it |
 | Numerics | numpy only for features, DTW, scoring | Easy to test and to explain; DTW written by hand | scipy for smoothing filters |
-| Pose model | A COCO-17 top-down model (ViTPose, RTMPose or YOLO-pose), to be chosen on day 1 by speed and accuracy on the sample clip | The dataset poses are COCO-17, produced by ViTPose | MediaPipe (33 landmarks, needs mapping to COCO-17) |
+| Pose model | One instructor-permitted COCO-17 top-down model, chosen by speed and accuracy on the sample clip | The dataset poses are COCO-17, produced by ViTPose | Another permitted COCO-17 model |
 | Server | FastAPI | Simple file upload and background jobs | Flask |
 | Phone UI | A web page opened in the phone browser | No native app, no store, works on iOS and Android | Native app (out of scope) |
 | Overlay | OpenCV drawing, encoded as H.264 with ffmpeg | Phones play H.264 reliably | |
 | Storage | Files on disk (`.npz`, `.csv`, `.json`) | Nothing to install | A database |
 
-Phone upload uses an `<input type="file" accept="video/*" capture>` control. It opens the phone camera
-or gallery and needs no special browser permission, whereas live camera access (`getUserMedia`) needs
-HTTPS, which complicates a laptop server. Live mode is therefore a stretch goal.
+Phone upload uses an `<input type="file" accept="video/*" capture>` control. It can offer camera capture
+or gallery selection depending on the browser. The MVP analyzes an uploaded short clip; live camera
+streaming is explicitly out of scope.
 
 ## 3. Data contracts
 
@@ -74,7 +78,7 @@ day-2 check. Dataset visibility flags (0, 1, 2) are converted to a confidence of
 | `player_track` | Track ID from our tracker |
 | `player_id` | One of eight pros |
 | `side` | `near` or `far` (see section 5) |
-| `type` | `forehand`, `backhand`, `smash` |
+| `type` | `forehand` or `backhand` |
 | `handedness` | `right` or `left`, estimated |
 | `start_frame`, `contact_frame`, `end_frame` | Frame numbers in the match video |
 | `hitter_confidence` | Score from the hitter-inference step |
@@ -108,6 +112,7 @@ Strokes are time-normalised so that index `contact_idx` (proposed: step 40 of 60
     {
       "start_frame": 120, "contact_frame": 133, "end_frame": 150,
       "score": 72.4,
+      "confidence": 0.86,
       "feature_scores": {"elbow_angle": 0.81, "...": 0.0},
       "feedback": [
         {"feature": "elbow_angle", "phase": "contact", "direction": "lower", "size_deg": 18,
@@ -116,9 +121,14 @@ Strokes are time-normalised so that index `contact_idx` (proposed: step 40 of 60
       "pose_quality": {"frames": 31, "confident_fraction": 0.94}
     }
   ],
-  "warnings": []
+  "warnings": [],
+  "failure": null
 }
 ```
+
+`confidence` summarizes pose quality, stroke-isolation quality, and how far the stroke is from the
+reliable professional reference. If a required quality check fails, `failure` contains a stable error
+code and human-readable message and `strokes` is empty; the system does not return a misleading score.
 
 ### 3.5 Server API
 
@@ -256,10 +266,11 @@ The score means similarity to professional technique. It is not a verified measu
 
 ### 8.1 Screens
 
-1. **Setup:** choose hand and stroke. A diagram shows where to place the camera.
-2. **Record or choose:** opens the phone camera or gallery.
+1. **Setup:** choose hand and either forehand or backhand. A diagram shows where to place the camera.
+2. **Record or upload:** opens the phone camera or gallery.
 3. **Processing:** progress bar with stage names from `/status`.
-4. **Result:** overlay video, big score, three feedback lines, a "record again" button.
+4. **Result:** overlay video, similarity score, confidence indicators, three feedback lines, and a
+   "record again" button.
 5. **Error:** a plain message and what to do (see below).
 
 ### 8.2 Error messages the app must show
@@ -271,6 +282,8 @@ The score means similarity to professional technique. It is not a verified measu
 | No swing detected | "No stroke found. Make sure the swing is inside the clip." |
 | Clip too long | "Clip is over 20 seconds. Trim to one or two strokes." |
 | Low pose quality | "Pose tracking was unreliable on this clip (X% of frames). Result may be wrong." |
+| Low reference confidence | "This stroke is outside the reliable professional reference range. Treat the score cautiously." |
+| Ambiguous stroke | "The selected stroke could not be isolated reliably. Record one clear forehand or backhand." |
 | Server unreachable | "Cannot reach the server. Check that you are on the same Wi-Fi." |
 
 ### 8.3 Privacy
@@ -315,3 +328,21 @@ docs/          this documentation
 - A score is similarity to professionals, not a verdict, until a coach rates clips.
 - Padel glass walls and shadows may confuse the pose model; failures are logged in `docs/failures.md`.
 - Latency is not yet measured.
+- The user selects forehand or backhand; automatic stroke-classification accuracy is not an MVP metric.
+- The score is a similarity measure with confidence and failure checks, not a correctness judgement.
+
+## 12. Future product direction
+
+The current architecture is intended to make the MVP testable while leaving room for a larger
+professional system. Future versions could add:
+
+- a licensed multi-player professional reference library with metadata for player, handedness, camera
+  view, stroke context, and coach labels;
+- automatic stroke classification and better hitter/contact detection;
+- camera calibration, court geometry, ball and racket tracking, and multi-camera or 3D analysis;
+- session-level aggregation, athlete progress trends, coach annotations, and drill recommendations;
+- secure academy deployment with authentication, role-based access, consent, retention, and audit logs.
+
+These capabilities must be introduced only after the MVP's similarity score and confidence reporting are
+validated. The system should remain a decision-support tool for coaches, not an unsupervised replacement
+for professional judgement.
