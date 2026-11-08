@@ -1,0 +1,1 @@
+"""Padel stroke technique analysis."""
