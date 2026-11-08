@@ -10,9 +10,8 @@ Given a short recording from a single fixed camera, the system:
 4. compares those features with a carefully filtered professional reference, and
 5. reports an explainable similarity score, confidence indicators, and specific deviations.
 
-> **Status:** planning. Nothing is implemented yet. This is a CMAI 480 (Computer Vision) group project
-> on a 4-week schedule. The plan is Python-first with a phone web app; the course asks for MATLAB, so
-> the allowance and any MATLAB work are open items in [docs/project-plan.md](docs/project-plan.md). See [docs/project-plan.md](docs/project-plan.md) for course
+> **Status:** Week 1 data pipeline built; features, reference, scoring and the web app are not started. This is a CMAI 480 (Computer Vision) group project
+> on a 4-week schedule. The plan is Python-first with a phone web app. The instructor approved Python and AI assistance (reported verbally, 2026-11-08). See [docs/project-plan.md](docs/project-plan.md) for course
 > requirements and timeline, [docs/design.md](docs/design.md) for the planned pipeline, and
 > [docs/datasets.md](docs/datasets.md) for the data sources.
 
@@ -80,6 +79,15 @@ MATLAB source folders are listed in [docs/design.md](docs/design.md) and are not
 
 ## Current status
 
-This repository contains the project specification and execution plan. The implementation is not
-started yet. Course approval, the permitted pose model, and the rights to use the professional match
-video must be confirmed before the data pipeline is treated as final.
+The specification and plan are in `docs/`. Implemented so far (`padel/`, `scripts/`, `tests/`):
+
+- PadelTracker100 loaders and stroke-window grouping (575 windows: 293 forehand, 282 backhand)
+- A position-based four-player tracker
+- Per-window hitter, contact frame, near-side flag and handedness (231 usable near-side windows)
+- Pose model chosen: YOLO11-pose (see `docs/measurements.md`)
+
+Not started: features, reference and DTW scoring, phone clip pose extraction, web app, evaluation.
+Still open: rights to use the professional match video, and written confirmation of the instructor's approval.
+
+Run: `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe`, then `py -m pytest -q`;
+the pipeline scripts take the dataset labels folder as their first argument.

@@ -19,9 +19,9 @@ member understands the content and it stays within the project requirements.
 
 **Before week 1 ends, get this in writing from the instructor:**
 
-- [ ] Python may be the main language for pose extraction, analysis and the app (or which parts must be MATLAB).
-- [ ] AI assistance is allowed under the stated condition.
-- [ ] Which pretrained pose model is permitted.
+- [x] Python may be the main language for pose extraction, analysis and the app (instructor approved, reported verbally by Najeeb, 2026-11-08; get it in writing).
+- [x] AI assistance is allowed under the stated condition (same verbal approval).
+- [x] Which pretrained pose model is permitted: the instructor advised MediaPipe or something similar; YOLO11-pose chosen after a benchmark (`docs/measurements.md`).
 - [ ] A phone web app satisfies the "camera sensor connected to MATLAB" requirement, or what substitutes for it.
 - [ ] Whether the 4-week schedule replaces the weeks 14–15 demo timing.
 
@@ -317,10 +317,9 @@ Results carry the most weight, so the evaluation protocol is fixed in week 1 and
 
 ## 13. Open decisions
 
-- [ ] Written answers from the instructor (section 1).
-- [ ] Which pose model (accuracy against speed; the dataset's own poses were made with ViTPose and a
-  COCO-17 output is needed).
-- [ ] Which near-side camera-side rule to use (day 4).
+- [ ] Written answers from the instructor (section 1). Python and AI use approved verbally on 2026-11-08; the phone-app and demo-timing questions are still open.
+- [x] Which pose model: YOLO11-pose (COCO-17 output, finds the near-side players on broadcast footage; MediaPipe found almost none). Re-test MediaPipe on phone clips.
+- [x] Near-side rule: hitter hip y >= 600 px at contact (placeholder; check sample images per side, see `docs/datasets.md`).
 - [ ] Whether to keep the shoulder angle as a feature, since the literature shows it is the least reliable joint
   from 2D.
 - [ ] Footage rights for the pro match video before any of it appears in the demo or report.

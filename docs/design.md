@@ -33,7 +33,7 @@ different code, any mismatch looks like a technique difference.
 |---|---|---|---|
 | Language | Python 3.10+ | Pose models and web servers are easiest here | MATLAB for some parts if the course requires it |
 | Numerics | numpy only for features, DTW, scoring | Easy to test and to explain; DTW written by hand | scipy for smoothing filters |
-| Pose model | One instructor-permitted COCO-17 top-down model, chosen by speed and accuracy on the sample clip | The dataset poses are COCO-17, produced by ViTPose | Another permitted COCO-17 model |
+| Pose model | YOLO11-pose (Ultralytics, COCO-17, multi-person) | Chosen 2026-11-08 from a benchmark on the sample clip: it found both near-side players, MediaPipe almost none; dataset poses are COCO-17 too. AGPL-3.0 licence | MediaPipe for close-up phone clips (untested); smaller YOLO11 sizes if too slow on CPU (4.4 fps for the medium model) |
 | Server | FastAPI | Simple file upload and background jobs | Flask |
 | Phone UI | A web page opened in the phone browser | No native app, no store, works on iOS and Android | Native app (out of scope) |
 | Overlay | OpenCV drawing, encoded as H.264 with ffmpeg | Phones play H.264 reliably | |
@@ -185,7 +185,9 @@ two sides. Our own camera also sees the player from behind. So:
 3. Report how many strokes this removes. If too few remain for a stroke type, revisit; do not silently mix
    the sides.
 
-This is a proposal that needs checking by eye on sample frames (plan day 4).
+Implemented as a placeholder: a stroke is near-side if the hitter's hip centre is at y >= 600 px at the contact frame (231 of 575 windows pass). Still to check by eye on sample images per side. Players change ends and cross the court, so the side is decided per stroke window, not per tracked player; track IDs are not player identities.
+
+Handedness is also decided per window: seen from behind, the racket-wrist side at contact versus the stroke type gives right or left (about 70% right in the near-side windows). Left-handed strokes are mirrored. This rule is unvalidated against known handedness.
 
 ## 6. Pipeline stages
 
