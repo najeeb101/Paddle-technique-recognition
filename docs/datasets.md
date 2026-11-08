@@ -90,3 +90,13 @@ No public padel dataset labels technique quality, so these do not exist and have
 
 Keep raw video and downloaded datasets out of git; track only code, configs and small reference
 files.
+
+## Findings from the first pipeline pass (2026-11-08)
+
+Scripts: `scripts/infer_hitters.py`, `handedness.py`, `finalize_index.py`, `check_hitters.py`. Output: `data/strokes_index_full.csv` (git-ignored; rebuild with the scripts).
+
+- **Hitter** = the tracked player whose faster wrist has the highest torso-normalised peak speed in the window; **contact** = frame of that wrist's speed peak. On a 24-window contact sheet (men's match) the inferred player was visibly mid-swing in nearly every tile; this is an eyeball check, not the planned 40-window accuracy count, and contact error in frames is not measured.
+- **Track IDs are not player identities.** Players cross the court and the tracker is position-based, so one ID spans near and far side over 20k frames (median hip y 305-684 px). Per-player handedness from track IDs therefore gave only 54-84% agreement and is not used.
+- **Handedness is decided per window instead**: seen from behind, a forehand wrist is on the racket side, a backhand wrist on the other. Near-side windows split about 70% R / 30% L, which fits a mix of right- and left-handers. Left-handed strokes must be mirrored before scoring. The rule is unvalidated against known handedness.
+- **Near-side filter**: hitter hip y at contact >= 600 px (placeholder threshold, no sample images per side yet). Usable near-side windows: 136 forehand, 95 backhand (231 of 575). 5 windows had no hitter found.
+- The wrist-speed hitter rule can pick a wrong player or the non-racket wrist; this is the main known weakness.
