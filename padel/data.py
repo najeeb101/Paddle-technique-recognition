@@ -23,21 +23,24 @@ def frame_index(file_name: str) -> int:
     return int(Path(file_name).stem.split("_")[1])
 
 
-def load_poses(path: str | Path, swap_lr: bool = False):
-    """Return {frame: array (n_people, 17, 3)} with keypoints in canonical COCO order.
+# Verified by eye (scripts/check_lr.py, 2026-11-08): the men's file (FinalM) lists left/right names
+# swapped, but its coordinates follow the standard COCO column order. So its names must be ignored.
+NAMES_TRUSTED = {"FinalF": True, "FinalM": False}
 
-    Columns are reordered by the file's own keypoint names. If `swap_lr` is set the left/right
-    pairs are exchanged afterwards (use when the names, not the coordinates, are what is wrong).
+
+def load_poses(path: str | Path, trust_names: bool = True):
+    """Return ({frame: array (n_people, 17, 3)}, names) with keypoints in canonical COCO order.
+
+    With `trust_names` the columns are reordered by the file's own keypoint names; otherwise the
+    file's column order is taken to already be standard COCO (the case for the men's file).
     """
     d = json.load(open(path))
     names = d["categories"][0]["keypoints"]
-    order = [names.index(n) for n in COCO17]
+    order = [names.index(n) for n in COCO17] if trust_names else list(range(17))
     fname = {im["id"]: frame_index(im["file_name"]) for im in d["images"]}
     out: dict[int, list] = {}
     for a in d["annotations"]:
         kp = np.asarray(a["keypoints"], dtype=float).reshape(17, 3)[order]
-        if swap_lr:
-            kp = kp[[0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]]
         out.setdefault(fname[a["image_id"]], []).append(kp)
     return {f: np.stack(v) for f, v in out.items()}, names
 

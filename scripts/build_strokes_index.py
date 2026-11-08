@@ -5,14 +5,14 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from padel.data import load_poses, load_shots, stroke_windows  # noqa: E402
+from padel.data import NAMES_TRUSTED, load_poses, load_shots, stroke_windows  # noqa: E402
 
 root = Path(sys.argv[1])
 out = Path(sys.argv[2] if len(sys.argv) > 2 else "data/strokes_index.csv")
 out.parent.mkdir(parents=True, exist_ok=True)
 rows = []
 for match in ("FinalF", "FinalM"):
-    poses, names = load_poses(root / f"2022_BCN_{match}_1_pose.json")
+    poses, names = load_poses(root / f"2022_BCN_{match}_1_pose.json", NAMES_TRUSTED[match])
     shots, n_rows = load_shots(root / f"2022_BCN_{match}_1_shots.csv")
     wins = stroke_windows(shots)
     print(match, "csv rows", n_rows, "pose frames", len(poses), "windows", Counter(w[0] for w in wins))

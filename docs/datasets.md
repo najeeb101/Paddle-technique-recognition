@@ -66,7 +66,7 @@ dropshot 5. Dropshot is too rare to use.
 - [ ] Whether v1 and v2 pose and shot files are byte-identical (v2 is only known to be
   checksum-different as a zip).
 - [ ] Where contact falls inside the shot window (needs viewing the video).
-- [ ] Which of the men's keypoint orderings is correct (see problem 1).
+- [x] Which of the men's keypoint orderings is correct: **resolved 2026-11-08.** Drawing keypoints on near-side players (`scripts/check_lr.py`) shows the men's file has mislabelled names but standard COCO column order, so its names are ignored (`NAMES_TRUSTED` in `padel/data.py`). The women's file is correct as labelled.
 
 ## Other sources considered
 
