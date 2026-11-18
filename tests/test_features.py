@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from padel.features import FEATURES, as_right_handed, fix_lr_flips, swap_lr, joint_angle, stroke_features, wrap
+from padel.features import FEATURES, as_right_handed, fix_lr_all, fix_lr_flips, swap_lr, joint_angle, stroke_features, wrap
 
 
 def col(name):
@@ -105,3 +105,11 @@ def test_fix_lr_flips_leaves_clean_stroke_alone():
     kp = standing(8)
     fixed, mask = fix_lr_flips(kp)
     assert not mask.any() and np.allclose(fixed, kp)
+
+
+def test_fix_lr_all_repairs_hips_flipped_alone():
+    kp = standing(8)
+    flipped = kp.copy()
+    flipped[3:6] = swap_lr(kp[3:6], (11, 12, 13, 14, 15, 16))
+    assert not np.allclose(flipped, kp)
+    assert np.allclose(fix_lr_all(flipped), kp)

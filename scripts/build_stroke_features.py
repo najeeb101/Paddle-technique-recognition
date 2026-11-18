@@ -14,7 +14,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from padel.data import NAMES_TRUSTED, load_poses  # noqa: E402
-from padel.features import FEATURES, fix_lr_flips, stroke_features  # noqa: E402
+from padel.features import FEATURES, fix_lr_all, stroke_features  # noqa: E402
 from padel.strokes import _series  # noqa: E402
 from padel.tracking import track_players  # noqa: E402
 
@@ -33,8 +33,9 @@ for match in ("FinalF", "FinalM"):
         frames = list(range(start - MARGIN, end + MARGIN + 1))
         kp = _series(tracks, int(r["hitter"]), frames)
         kp[np.isnan(kp[..., 2])] = (np.nan, np.nan, 0.0)
-        kp, swapped = fix_lr_flips(kp)
-        n_swapped += int(swapped.any())
+        fixed = fix_lr_all(kp)
+        n_swapped += int(not np.array_equal(np.nan_to_num(fixed), np.nan_to_num(kp)))
+        kp = fixed
         sid = f"{match}_{start:06d}"
         hand = "right" if r["handed"] == "R" else "left"
         arrays[f"{sid}/kp"] = kp.astype(np.float32)

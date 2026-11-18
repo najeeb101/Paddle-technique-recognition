@@ -20,12 +20,17 @@ FEATURES = (
 _SWAP = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
 
 
-def swap_lr(kp: np.ndarray) -> np.ndarray:
-    """Swap every left/right keypoint pair of a (...,17,C) array."""
-    return np.asarray(kp)[..., _SWAP, :]
+def swap_lr(kp: np.ndarray, joints: tuple[int, ...] | None = None) -> np.ndarray:
+    """Swap left/right keypoint pairs of a (...,17,C) array; `joints` limits it to pairs with both indices in it."""
+    kp = np.asarray(kp)
+    if joints is None:
+        return kp[..., _SWAP, :]
+    idx = [j if (j not in joints or _SWAP[j] not in joints) else _SWAP[j] for j in range(17)]
+    return kp[..., idx, :]
 
 
-def fix_lr_flips(kp: np.ndarray, anchor_weight: float = 0.5) -> tuple[np.ndarray, np.ndarray]:
+def fix_lr_flips(kp: np.ndarray, anchor_weight: float = 0.5, pair: tuple[int, ...] = (5, 6, 11, 12, 13, 14, 15, 16),
+                 anchor: tuple[int, int] = (5, 6), swap_joints: tuple[int, ...] | None = None) -> tuple[np.ndarray, np.ndarray]:
     """Undo left/right label swaps that the pose model makes mid-stroke.
 
     Two-state Viterbi over frames: state 1 means "this frame's sides are swapped". A frame must move less (in
@@ -35,7 +40,7 @@ def fix_lr_flips(kp: np.ndarray, anchor_weight: float = 0.5) -> tuple[np.ndarray
     """
     kp = np.asarray(kp, dtype=float)
     T = len(kp)
-    pair = [5, 6, 11, 12, 13, 14, 15, 16]
+    pair = list(pair)
     xy = kp[..., :2].copy()
     xy[~(kp[..., 2] > 0)] = np.nan
     torso = np.nanmedian(np.linalg.norm((xy[:, 5] + xy[:, 6]) / 2 - (xy[:, 11] + xy[:, 12]) / 2, axis=1)) if T else np.nan
@@ -49,7 +54,7 @@ def fix_lr_flips(kp: np.ndarray, anchor_weight: float = 0.5) -> tuple[np.ndarray
 
     unary = np.zeros((T, 2))
     for t in range(T):
-        sh = xy[t, [5, 6]]
+        sh = xy[t, list(anchor)]
         if np.isfinite(sh).all():
             for s in (0, 1):
                 a, b = (sh[0], sh[1]) if s == 0 else (sh[1], sh[0])
@@ -67,7 +72,7 @@ def fix_lr_flips(kp: np.ndarray, anchor_weight: float = 0.5) -> tuple[np.ndarray
             for r in (0, 1):
                 trans = 0.0
                 if prev_valid is not None and has:
-                    trans = dist(cur[_SWAP] if s else cur, xy[prev_valid][_SWAP] if r else xy[prev_valid])
+                    trans = dist(swap_lr(cur, swap_joints) if s else cur, swap_lr(xy[prev_valid], swap_joints) if r else xy[prev_valid])
                 c = cost[t - 1, r] + trans
                 if best is None or c < best[0]:
                     best = (c, r)
@@ -80,8 +85,16 @@ def fix_lr_flips(kp: np.ndarray, anchor_weight: float = 0.5) -> tuple[np.ndarray
     for t in range(T - 1, 0, -1):
         state[t - 1] = back[t, state[t]]
     out = kp.copy()
-    out[state == 1] = swap_lr(kp[state == 1])
+    out[state == 1] = swap_lr(kp[state == 1], swap_joints)
     return out, state == 1
+
+
+def fix_lr_all(kp: np.ndarray) -> np.ndarray:
+    """Global left/right fix, then a lower-body pass: the model flips hips and legs independently of the shoulders."""
+    kp, _ = fix_lr_flips(kp)
+    lower = (11, 12, 13, 14, 15, 16)
+    kp, _ = fix_lr_flips(kp, pair=lower, anchor=(11, 12), swap_joints=lower)
+    return kp
 
 
 def as_right_handed(kp: np.ndarray, hand: str) -> np.ndarray:
