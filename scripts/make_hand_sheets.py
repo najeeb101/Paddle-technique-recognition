@@ -2,7 +2,7 @@
 
 Usage: make_hand_sheets.py <v1 extracted dir> data/strokes_index_full.csv <out dir> [per_sheet]
 
-Each window shows the hitter at contact-3 and contact, cropped around the pose, with no keypoints drawn
+Each window shows the hitter at contact -6, -3, 0 and +3, cropped around the pose, with no keypoints drawn
 so the label comes from the racket alone. Seen from behind, the player's right is image right.
 """
 import csv
@@ -17,10 +17,10 @@ from padel.data import NAMES_TRUSTED, load_poses  # noqa: E402
 from padel.tracking import track_players  # noqa: E402
 
 ext, idx, outdir = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
-per = int(sys.argv[4]) if len(sys.argv) > 4 else 12
+per = int(sys.argv[4]) if len(sys.argv) > 4 else 8
 outdir.mkdir(parents=True, exist_ok=True)
 rows = [r for r in csv.DictReader(open(idx)) if r["near_side"] == "1"]
-S, COLS = 230, 3
+S, COLS, OFFSETS = 200, 2, (-6, -3, 0, 3)
 
 
 def crop(img, kp):
@@ -45,7 +45,7 @@ for match in ("FinalF", "FinalM"):
     for r in sorted(mine, key=lambda r: int(r["contact"])):
         c, tid = int(r["contact"]), int(r["hitter"])
         pair = []
-        for f in (c - 3, c):
+        for f in (c + o for o in OFFSETS):
             cap.set(cv2.CAP_PROP_POS_FRAMES, f)
             ok, img = cap.read()
             kp = tracks.get(f, {}).get(tid)
@@ -58,7 +58,7 @@ for s in range(0, len(tiles), per):
     cells = []
     for k, (r, t) in enumerate(chunk):
         n = s + k + 1
-        cv2.rectangle(t, (0, 0), (2 * S - 1, S - 1), (255, 255, 255), 2)
+        cv2.rectangle(t, (0, 0), (len(OFFSETS) * S - 1, S - 1), (255, 255, 255), 2)
         cv2.putText(t, f"#{n} {r['type'][:2]}", (6, 22), 0, 0.7, (0, 255, 255), 2)
         cells.append(t)
         out_rows.append(dict(id=n, match=r["match"], start=r["start"], type=r["type"], hand=r["hand"],
