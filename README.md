@@ -67,6 +67,8 @@ docs/
   design.md         pipeline, features, scoring, assumptions
   datasets.md       data sources, licences, caveats
   measurements.md   benchmark and pipeline numbers
+  pipeline.md       step-by-step guide to the code, files and methods
+  results.md        every finding so far, failures, and what is left
   label-suspects.md forehand labels that look wrong
 padel/              pipeline package; scripts/ and tests/ alongside; reference/ holds the built references
 ```
