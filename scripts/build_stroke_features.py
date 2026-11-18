@@ -14,7 +14,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from padel.data import NAMES_TRUSTED, load_poses  # noqa: E402
-from padel.features import FEATURES, stroke_features  # noqa: E402
+from padel.features import FEATURES, fix_lr_flips, stroke_features  # noqa: E402
 from padel.strokes import _series  # noqa: E402
 from padel.tracking import track_players  # noqa: E402
 
@@ -22,7 +22,7 @@ MARGIN, FPS = 10, 30.0
 
 labels, idx, out = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
 rows = [r for r in csv.DictReader(open(idx)) if r["near_side"] == "1" and r["handed"]]
-arrays, meta = {}, []
+arrays, meta, n_swapped = {}, [], 0
 for match in ("FinalF", "FinalM"):
     mine = [r for r in rows if r["match"] == match]
     poses, _ = load_poses(labels / f"2022_BCN_{match}_1_pose.json", NAMES_TRUSTED[match])
@@ -33,6 +33,8 @@ for match in ("FinalF", "FinalM"):
         frames = list(range(start - MARGIN, end + MARGIN + 1))
         kp = _series(tracks, int(r["hitter"]), frames)
         kp[np.isnan(kp[..., 2])] = (np.nan, np.nan, 0.0)
+        kp, swapped = fix_lr_flips(kp)
+        n_swapped += int(swapped.any())
         sid = f"{match}_{start:06d}"
         hand = "right" if r["handed"] == "R" else "left"
         arrays[f"{sid}/kp"] = kp.astype(np.float32)
@@ -41,7 +43,7 @@ for match in ("FinalF", "FinalM"):
 
 out.parent.mkdir(parents=True, exist_ok=True)
 np.savez_compressed(out, meta=np.array(meta, dtype=str), feature_names=np.array(FEATURES), **arrays)
-print(f"wrote {len(meta)} strokes to {out}")
+print(f"wrote {len(meta)} strokes to {out}; {n_swapped} had left/right swaps corrected")
 
 allf = np.concatenate([arrays[f"{m[0]}/feat"] for m in meta])
 print("missing (NaN) share per feature:")

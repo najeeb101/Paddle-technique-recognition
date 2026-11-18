@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from padel.features import FEATURES, as_right_handed, joint_angle, stroke_features, wrap
+from padel.features import FEATURES, as_right_handed, fix_lr_flips, swap_lr, joint_angle, stroke_features, wrap
 
 
 def col(name):
@@ -89,3 +89,19 @@ def test_bad_hand_and_wrap():
     with pytest.raises(ValueError):
         as_right_handed(standing(), "both")
     assert np.allclose(wrap(np.array([190.0, -190.0, 0.0])), [-170, 170, 0])
+
+
+def test_fix_lr_flips_restores_swapped_frames():
+    kp = standing(8)
+    kp[:, 8] += (0, 0, 0)
+    flipped = kp.copy()
+    flipped[3:6] = swap_lr(kp[3:6])
+    fixed, mask = fix_lr_flips(flipped)
+    assert mask.tolist() == [False, False, False, True, True, True, False, False]
+    assert np.allclose(fixed, kp)
+
+
+def test_fix_lr_flips_leaves_clean_stroke_alone():
+    kp = standing(8)
+    fixed, mask = fix_lr_flips(kp)
+    assert not mask.any() and np.allclose(fixed, kp)

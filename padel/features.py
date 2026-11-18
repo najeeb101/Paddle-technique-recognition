@@ -20,6 +20,70 @@ FEATURES = (
 _SWAP = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
 
 
+def swap_lr(kp: np.ndarray) -> np.ndarray:
+    """Swap every left/right keypoint pair of a (...,17,C) array."""
+    return np.asarray(kp)[..., _SWAP, :]
+
+
+def fix_lr_flips(kp: np.ndarray, anchor_weight: float = 0.5) -> tuple[np.ndarray, np.ndarray]:
+    """Undo left/right label swaps that the pose model makes mid-stroke.
+
+    Two-state Viterbi over frames: state 1 means "this frame's sides are swapped". A frame must move less (in
+    torso lengths, over the paired joints) from the last valid frame under its chosen labelling. A weak
+    per-frame prior prefers the shoulder line pointing image-right, which is what a player seen from behind
+    (near side) shows. Returns (fixed kp, bool mask of swapped frames).
+    """
+    kp = np.asarray(kp, dtype=float)
+    T = len(kp)
+    pair = [5, 6, 11, 12, 13, 14, 15, 16]
+    xy = kp[..., :2].copy()
+    xy[~(kp[..., 2] > 0)] = np.nan
+    torso = np.nanmedian(np.linalg.norm((xy[:, 5] + xy[:, 6]) / 2 - (xy[:, 11] + xy[:, 12]) / 2, axis=1)) if T else np.nan
+    if not np.isfinite(torso) or torso <= 0:
+        return kp.copy(), np.zeros(T, bool)
+
+    def dist(a, b):
+        d = np.linalg.norm(a[pair] - b[pair], axis=1)
+        d = d[np.isfinite(d)]
+        return d.mean() / torso if len(d) else 0.0
+
+    unary = np.zeros((T, 2))
+    for t in range(T):
+        sh = xy[t, [5, 6]]
+        if np.isfinite(sh).all():
+            for s in (0, 1):
+                a, b = (sh[0], sh[1]) if s == 0 else (sh[1], sh[0])
+                unary[t, s] = anchor_weight * (1 - np.cos(np.arctan2(-(b - a)[1], (b - a)[0])))
+
+    cost = np.zeros((T, 2))
+    back = np.zeros((T, 2), int)
+    cost[0] = unary[0]
+    prev_valid = 0 if np.isfinite(xy[0, pair]).any() else None
+    for t in range(1, T):
+        cur = xy[t]
+        has = np.isfinite(cur[pair]).any()
+        for s in (0, 1):
+            best = None
+            for r in (0, 1):
+                trans = 0.0
+                if prev_valid is not None and has:
+                    trans = dist(cur[_SWAP] if s else cur, xy[prev_valid][_SWAP] if r else xy[prev_valid])
+                c = cost[t - 1, r] + trans
+                if best is None or c < best[0]:
+                    best = (c, r)
+            cost[t, s] = best[0] + unary[t, s]
+            back[t, s] = best[1]
+        if has:
+            prev_valid = t
+    state = np.zeros(T, int)
+    state[-1] = int(np.argmin(cost[-1]))
+    for t in range(T - 1, 0, -1):
+        state[t - 1] = back[t, state[t]]
+    out = kp.copy()
+    out[state == 1] = swap_lr(kp[state == 1])
+    return out, state == 1
+
+
 def as_right_handed(kp: np.ndarray, hand: str) -> np.ndarray:
     """Return (T,17,2) x, y with missing points as NaN; a left-handed stroke is mirrored and its sides swapped."""
     kp = np.asarray(kp, dtype=float)
