@@ -52,9 +52,9 @@ dropshot 5. Dropshot is too rare to use.
 3. **Contact frame is not labelled.** The window is the hitter's racket movement; whether it starts at
    swing onset or ball contact is not stated. Contact must be estimated, for example as the wrist-speed
    peak inside the window.
-4. **Handedness is not labelled.** Left- and right-handed players are not distinguished, and
-   forehand/backhand depend on it. Estimate it per player from which wrist moves in the labelled
-   windows.
+4. **Handedness is not labelled in the dataset.** We labelled it ourselves by eye for the 355 near-side
+   windows (2026-11-18): 311 right-handed, 31 left-handed, 13 unclear. Forehand/backhand labels also
+   have errors: 13 of 187 near-side forehands look wrong or ambiguous (`docs/label-suspects.md`).
 5. **Narrow style coverage:** eight players from one tournament. State this in any result.
 
 ### Still unverified
@@ -100,4 +100,5 @@ Scripts: `scripts/infer_hitters.py`, `handedness.py`, `finalize_index.py`, `chec
 - **Handedness is decided per window instead**: seen from behind, a forehand wrist is on the racket side, a backhand wrist on the other. Near-side windows split about 70% R / 30% L, which fits a mix of right- and left-handers. Left-handed strokes must be mirrored before scoring. The rule is unvalidated against known handedness.
 - **Near-side filter**: hitter hip y at contact >= 600 px (placeholder threshold, no sample images per side yet). Usable near-side windows: 136 forehand, 95 backhand (231 of 575). 5 windows had no hitter found.
 - The wrist-speed hitter rule can pick a wrong player or the non-racket wrist; this is the main known weakness.
-- **Handedness (2026-11-18):** labelled by eye from the racket on contact sheets of all 355 near-side windows. One left-hander (women's final, dark kit, dark hair); everyone else right-handed. 342 labelled, 13 unclear. Several windows labelled Forehand show a right-hander with the racket on the backhand side, so some shot labels or contact frames are off; not yet counted.
+- **Handedness (2026-11-18):** labelled by eye from the racket on contact sheets of all 355 near-side windows. One left-hander (women's final, dark kit, dark hair); everyone else right-handed. 342 labelled, 13 unclear. Several windows labelled Forehand show a right-hander with the racket on the backhand side, so some shot labels or contact frames are off; counted 2026-11-18 with a wrist-side test: 15 of 187 forehands flagged, 13 kept as suspect (`docs/label-suspects.md`).
+- **Pose label noise (2026-11-18):** the dataset poses have left and right swapped for a few frames in 127 of 342 near-side strokes (shoulders and hips independently). Corrected in code, see `docs/design.md` section 6.2.

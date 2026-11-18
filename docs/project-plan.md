@@ -30,6 +30,48 @@ MATLAB track (section 10) that implements DTW from scratch, runs the simulation 
 evaluation plots from the keypoint files the Python side writes. It must be staffed from week 1; it
 cannot be added at the end.
 
+## Progress (updated 2026-11-18)
+
+Python pipeline from pro data to a score exists and is tested (37 tests, `py -m pytest -q`). The score does not yet separate strokes well enough to ship, and nothing user-facing exists.
+
+### Done
+
+| Plan item | State | Where |
+|---|---|---|
+| Day 1-2 loaders, men's keypoint order, stroke windows (575: 293 FH, 282 BH) | Done | `padel/data.py`, `docs/datasets.md` |
+| Day 2 tracker | Done, but track IDs are not players | `padel/tracking.py` |
+| Day 3-4 hitter, contact frame | Done, eyeballed only; hitter accuracy and contact error in frames not counted | `padel/strokes.py`, `scripts/infer_hitters.py` |
+| Day 3 handedness | Done by eye on contact sheets (311 R, 31 L, 13 unclear), replacing rules that scored 60-64% | `scripts/make_hand_sheets.py`, `apply_hand_labels.py` |
+| Day 4 near-side filter | Done with the v2 court homography: 355 of 575 windows (194 FH, 161 BH) | `padel/court.py` |
+| Pose model | YOLO11m-pose chosen from a benchmark | `docs/measurements.md` |
+| Day 5 features and curves | Done: 10 features, curves coherent after the left/right fix, 342 strokes | `padel/features.py`, `scripts/build_stroke_features.py` |
+| Left/right pose swaps | Fixed: the model swaps sides mid-stroke, shoulders and hips separately (127 of 342 strokes touched) | `fix_lr_all` in `padel/features.py` |
+| Forehand label check | Done: 13 of 187 forehands flagged, excluded from the reference | `docs/label-suspects.md` |
+| Day 6-7 DTW, resampling, medoid reference | Done: 174 forehand and 155 backhand strokes, 60 steps, contact at step 40 | `padel/reference.py`, `reference/*.npz` |
+| Day 8 scoring | Built per design 7.3, `wrist_speed` left out (circular) | `padel/scoring.py` |
+| Day 9 first hold-out check | Run; weak (below) | `scripts/eval_holdout.py` |
+| Day 11 phone clip pose pipeline | Done: decode, pose, pick person, clean, fill gaps, smooth | `padel/pose.py`, `scripts/clip_to_keypoints.py` |
+
+First hold-out result (80/20 stroke split, seed 0): held-out forehands score 94.0 against the forehand reference and 88.6 against the backhand one (higher for the right type in 80% of strokes); backhands 94.9 against 92.7 (61%). Scores saturate near 94, so the score is not usable yet.
+
+### Left
+
+| Priority | Item | Plan day |
+|---|---|---|
+| 1 | Make the score discriminate: tighten the z limit and std floor, tune on folds of the build set only, then re-run the hold-out | 8-9, 15 |
+| 2 | Flawed-stroke test: offset one feature of real strokes, check the score drops and the right feature is named; write `docs/results.md` | 8-9 |
+| 3 | Decide leave-players-out splits. Player identity is not tracked, so a leave-match-out split (women vs men) or a hand-labelled player map is needed | 7 |
+| 4 | Compare dataset poses with re-run YOLO poses on about 50 windows | 9-10 |
+| 5 | Swing detection on player clips (design 6.1); only the pro-window version exists | 11 |
+| 6 | `analyze_clip(video, hand, stroke)` joining detection, features, reference, scoring; result JSON per design 3.4 | 12 |
+| 7 | Overlay video (H.264), FastAPI server with background job, phone page, error messages (design 8) | 10, 12-13, 16 |
+| 8 | Film consented clips (20 per stroke, 2 players), failure log, own-clip evaluation, coach ratings if possible | 13-14, 16 |
+| 9 | Hitter accuracy count on 40 windows, contact error in frames, handedness check by a padel player | 3-4 |
+| 10 | Latency measurement and speed pass | 17 |
+| 11 | Report, demo script and backup video, oral exam dry run | 18-20 |
+
+Open outside the code: written instructor approval, whether the phone app meets the "camera sensor connected to MATLAB" requirement, demo timing, footage rights for the pro video, and a fifth member (the team has four). A padel player should settle the 7 ambiguous forehand labels.
+
 ## 2. What "done" means
 
 A teammate who has never seen the code can:
@@ -319,7 +361,10 @@ Results carry the most weight, so the evaluation protocol is fixed in week 1 and
 
 - [ ] Written answers from the instructor (section 1). Python and AI use approved verbally on 2026-11-08; the phone-app and demo-timing questions are still open.
 - [x] Which pose model: YOLO11-pose (COCO-17 output, finds the near-side players on broadcast footage; MediaPipe found almost none). Re-test MediaPipe on phone clips.
-- [x] Near-side rule: hitter hip y >= 600 px at contact (placeholder; check sample images per side, see `docs/datasets.md`).
+- [x] Near-side rule: replaced the hip y >= 600 px placeholder with the v2 court homography (feet at contact, court y > 10 m); 355 windows instead of 231 (`docs/design.md` section 5).
+- [x] Left/right pose swaps: fixed in code before features (`docs/design.md` section 6.2).
+- [ ] Score separation: tune the z limit and std floor on the build set only, then re-run the hold-out (`docs/design.md` section 7.4).
+- [ ] Whether `wrist_speed` enters the score (currently left out, circular).
 - [ ] Whether to keep the shoulder angle as a feature, since the literature shows it is the least reliable joint
   from 2D.
 - [ ] Footage rights for the pro match video before any of it appears in the demo or report.

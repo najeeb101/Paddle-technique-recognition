@@ -210,6 +210,16 @@ estimate. The dataset does not label contact, so this is an estimate checked aga
 - Smooth with a short filter (proposal: Savitzky–Golay, window 7, order 2). Do not smooth so heavily that
   the fast part of the swing is flattened; check on a real clip.
 
+**Left/right swaps (found 2026-11-18).** The pose model sometimes swaps every left and right label for a few
+frames, and the hips and legs can swap on their own while the shoulders stay put. In the pro data this
+affected 127 of 342 strokes and showed up as shoulder and hip angles jumping by about 180 degrees. Before
+features are computed, `fix_lr_all` (`padel/features.py`) runs a two-state Viterbi per stroke: a frame is
+swapped if that makes the keypoints move less from the last valid frame (in torso lengths), with a weak
+prior that the shoulder (or hip) line points image-right, as it does for a player seen from behind. One pass
+covers all joints keyed on the shoulders, a second covers hips and legs keyed on the hips. After it, 9
+strokes (10 frames) still show a hip flip; hip rotation spread in the reference dropped from about 75 to
+about 17 degrees. A user clip filmed from behind needs the same fix.
+
 ### 6.3 Player selection on user clips
 
 - One person in view: use them.
@@ -263,6 +273,32 @@ It is implemented by hand so each member can explain it; tests compare it with a
 
 The score means similarity to professional technique. It is not a verified measure of correctness.
 
+Implementation notes (`padel/reference.py`, `padel/scoring.py`):
+
+- `wrist_speed` is not scored by default: contact is defined from its peak, so it would always look
+  matched. The other nine features are scored. It is a parameter, and still decided in week 2.
+- Features with gaps are filled by interpolation before resampling; a feature missing for the whole stroke
+  is skipped and `coverage` reports how much was measured.
+- DTW runs on features divided by their overall spread, with a band of 12 steps (20% of 60).
+- The std floor is 0.25 of each feature's overall spread.
+- The forehand reference leaves out 13 strokes listed in `docs/label-suspects.md`.
+
+### 7.4 First hold-out result (2026-11-18)
+
+`scripts/eval_holdout.py`, seed 0: reference built on 80% of strokes (139 forehand, 124 backhand), the rest
+scored against both types.
+
+| Held-out strokes | Score vs right type | Score vs other type | Higher for right type |
+|---|---|---|---|
+| 35 forehands | 94.0 | 88.6 | 80% |
+| 31 backhands | 94.9 | 92.7 | 61% |
+
+Every stroke scores about 94, so this score is not yet usable. Two causes: the bands are wide (the real
+spread between players plus pose noise), so almost any plausible stroke falls within 2 std, and DTW
+absorbs timing and shape differences. Planned fix: a tighter z limit and std floor chosen on folds of the
+build set, then one final run on the untouched hold-out. This hold-out has been looked at once, so the
+final numbers should come from a new split or from the team's own clips.
+
 ## 8. Phone web app
 
 ### 8.1 Screens
@@ -293,23 +329,29 @@ Overlays can be saved with the video shown or with a skeleton on a blank backgro
 skeleton-only video on shared devices. Uploaded raw video is deleted after processing unless a flag
 keeps it for evaluation, and only when the filmed person consented.
 
-## 9. Repository layout (proposed)
+## 9. Repository layout
+
+Current layout (flat package, not the `src/` layout first proposed):
 
 ```
-src/padel/
-  data/        load PadelTracker100, tracking, hitter and contact inference, stroke database
-  pose/        pose model wrapper, smoothing, player selection
-  features.py  per-frame features
-  dtw.py       DTW from first principles
-  reference.py reference build and load
-  scoring.py   score and feedback
-  analyze.py   analyze_clip
-  server/      FastAPI app and the web page
-tests/         unit tests on synthetic keypoints
-reference/     small reference files (committed)
-data/          large data (not committed)
-docs/          this documentation
+padel/
+  data.py        load PadelTracker100 poses and shot labels
+  tracking.py    position-based four-player tracker
+  strokes.py     wrist speeds, hitter and contact per window
+  court.py       v2 court homography, near-side test
+  pose.py        clip pose extraction, cleaning, smoothing (YOLO11-pose)
+  features.py    per-frame features, mirroring, left/right swap fix
+  reference.py   resampling, DTW, medoid, reference build
+  scoring.py     score and feedback
+scripts/         one script per pipeline step and check (see README)
+tests/           unit tests on synthetic data (37)
+reference/       forehand.npz, backhand.npz (committed, small)
+data/            large and derived data (git-ignored)
+docs/            this documentation
 ```
+
+Not written yet: `analyze_clip`, swing detection for player clips, the overlay renderer, the FastAPI
+server and phone page (a proposed `src/padel/server/`).
 
 ## 10. Testing
 
@@ -323,12 +365,15 @@ docs/          this documentation
 
 ## 11. Known limits
 
-- Eight professionals from one tournament give narrow style coverage, and their handedness is unknown
-  until it is estimated from the data (plan day 3).
+- Eight professionals from one tournament give narrow style coverage, and their handedness was
+  labelled by eye (all right-handed but one woman).
 - 2D angles shift with camera position, so scores from a very different camera are not comparable.
 - A score is similarity to professionals, not a verdict, until a coach rates clips.
 - Padel glass walls and shadows may confuse the pose model; failures are logged in `docs/failures.md`.
 - Latency is not yet measured.
+- Pose noise on broadcast footage: the elbow angle is missing in 12% of frames and wrist height in 10%; players are only about 250 px tall.
+- Hitter inference is only eyeballed, contact error is not measured, and track IDs are not player identities, so a leave-players-out split needs a player map that does not exist yet.
+- Handedness and the forehand/backhand labels were checked by eye by the team (and the AI assistant), not by a padel coach; 7 forehands are ambiguous.
 - The user selects forehand or backhand; automatic stroke-classification accuracy is not an MVP metric.
 - The score is a similarity measure with confidence and failure checks, not a correctness judgement.
 

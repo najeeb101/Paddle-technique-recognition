@@ -10,7 +10,7 @@ Given a short recording from a single fixed camera, the system:
 4. compares those features with a carefully filtered professional reference, and
 5. reports an explainable similarity score, confidence indicators, and specific deviations.
 
-> **Status:** Week 1 data pipeline built; features, reference, scoring and the web app are not started. This is a CMAI 480 (Computer Vision) group project
+> **Status:** pro-data pipeline, features, reference and scoring are built and tested; the score does not discriminate well enough yet and the phone clip analysis and web app are not built. This is a CMAI 480 (Computer Vision) group project
 > on a 4-week schedule. The plan is Python-first with a phone web app. The instructor approved Python and AI assistance (reported verbally, 2026-11-08). See [docs/project-plan.md](docs/project-plan.md) for course
 > requirements and timeline, [docs/design.md](docs/design.md) for the planned pipeline, and
 > [docs/datasets.md](docs/datasets.md) for the data sources.
@@ -66,9 +66,12 @@ docs/
   literature-review.md   problem definition, related work, gap, ethics
   design.md         pipeline, features, scoring, assumptions
   datasets.md       data sources, licences, caveats
+  measurements.md   benchmark and pipeline numbers
+  label-suspects.md forehand labels that look wrong
+padel/              pipeline package; scripts/ and tests/ alongside; reference/ holds the built references
 ```
 
-MATLAB source folders are listed in [docs/design.md](docs/design.md) and are not created yet.
+The MATLAB track is conditional and not started.
 
 ## Requirements (planned)
 
@@ -77,17 +80,23 @@ MATLAB source folders are listed in [docs/design.md](docs/design.md) and are not
 - A phone on a tripod as the fixed camera, and a laptop as the server
 - MATLAB only if the instructor requires it (see the conditional track in the plan)
 
-## Current status
+## Current status (2026-11-18)
 
-The specification and plan are in `docs/`. Implemented so far (`padel/`, `scripts/`, `tests/`):
+The specification and plan are in `docs/`; `docs/project-plan.md` has the full done and left lists. Implemented (`padel/`, `scripts/`, `tests/`, 37 tests):
 
 - PadelTracker100 loaders and stroke-window grouping (575 windows: 293 forehand, 282 backhand)
-- A position-based four-player tracker
-- Per-window hitter, contact frame, near-side flag and handedness (231 usable near-side windows)
-- Pose model chosen: YOLO11-pose (see `docs/measurements.md`)
+- A position-based four-player tracker; per-window hitter and contact frame
+- Court homography near-side filter (355 usable windows: 194 forehand, 161 backhand)
+- Handedness labelled by eye (311 right, 31 left, 13 unclear); 13 suspect forehand labels recorded in `docs/label-suspects.md`
+- Pose model chosen (YOLO11-pose, `docs/measurements.md`); phone clip pose extraction with cleaning, gap filling and smoothing
+- Ten per-frame features, with a fix for the pose model's mid-stroke left/right swaps
+- Hand-written DTW, medoid reference (`reference/forehand.npz`, `reference/backhand.npz`) and scoring with feedback
 
-Not started: features, reference and DTW scoring, phone clip pose extraction, web app, evaluation.
-Still open: rights to use the professional match video, and written confirmation of the instructor's approval.
+First hold-out check: held-out strokes score about 94 against the right reference and 89-93 against the wrong one, so the score barely discriminates (61-80% correct ordering). Tuning it is next.
 
-Run: `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe`, then `py -m pytest -q`;
-the pipeline scripts take the dataset labels folder as their first argument.
+Not built: swing detection on phone clips, `analyze_clip`, overlay video, FastAPI server and phone page, flawed-stroke and own-clip evaluation, failure log, report.
+Still open: rights to use the professional match video, written confirmation of the instructor's approval, the phone-app vs "camera sensor connected to MATLAB" question, and a fifth member.
+
+Run: `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe matplotlib`, then `py -m pytest -q`.
+Pipeline order (each script documents its arguments): `build_strokes_index.py`, `infer_hitters.py`, `finalize_index.py`,
+`build_stroke_features.py`, `build_reference.py`; `eval_holdout.py` runs the hold-out check.
