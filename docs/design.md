@@ -179,13 +179,12 @@ The broadcast camera sits behind one baseline, so **near-side players are seen f
 players from the front**. They look very different in 2D, and left and right appear mirrored between the
 two sides. Our own camera also sees the player from behind. So:
 
-1. Classify each tracked player as near or far from the vertical position of their hips in the frame
-   (near-side players are lower in the image).
+1. Classify each stroke's hitter as near or far from their court position (homography, below).
 2. Build the reference from near-side strokes only.
 3. Report how many strokes this removes. If too few remain for a stroke type, revisit; do not silently mix
    the sides.
 
-Implemented as a placeholder: a stroke is near-side if the hitter's hip centre is at y >= 600 px at the contact frame (231 of 575 windows pass). Still to check by eye on sample images per side. Players change ends and cross the court, so the side is decided per stroke window, not per tracked player; track IDs are not player identities.
+Implemented with the PadelTracker100 v2 court homography (`padel/court.py`): one constant pixel-to-metre matrix per match maps the hitter's feet (mean of the ankles, else the hips) at the contact frame onto the court; near side means court y > 10 m (the net). 355 of 575 windows pass (194 forehand, 161 backhand). The earlier hip y >= 600 px rule gave 231, a strict subset. Players change ends and cross the court, so the side is decided per stroke window, not per tracked player; track IDs are not player identities.
 
 Handedness is also decided per window: seen from behind, the racket-wrist side at contact versus the stroke type gives right or left (about 70% right in the near-side windows). Left-handed strokes are mirrored. This rule is unvalidated against known handedness.
 
