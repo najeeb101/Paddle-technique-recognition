@@ -186,7 +186,7 @@ two sides. Our own camera also sees the player from behind. So:
 
 Implemented with the PadelTracker100 v2 court homography (`padel/court.py`): one constant pixel-to-metre matrix per match maps the hitter's feet (mean of the ankles, else the hips) at the contact frame onto the court; near side means court y > 10 m (the net). 355 of 575 windows pass (194 forehand, 161 backhand). The earlier hip y >= 600 px rule gave 231, a strict subset. Players change ends and cross the court, so the side is decided per stroke window, not per tracked player; track IDs are not player identities.
 
-Handedness is also decided per window: seen from behind, the racket-wrist side at contact versus the stroke type gives right or left (about 70% right in the near-side windows). Left-handed strokes are mirrored. This rule is unvalidated against known handedness.
+Handedness is also decided per window: seen from behind, the racket-wrist side at contact versus the stroke type gives right or left (213 of 355 near-side windows, 60%, come out right-handed, which looks too low for pros; see the feature curves). Left-handed strokes are mirrored. This rule is unvalidated against known handedness.
 
 ## 6. Pipeline stages
 
