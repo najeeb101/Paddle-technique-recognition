@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Padel stroke check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --turf: #1D4F91;
+    --glass: #123866;
+    --line: #F4F8FC;
+    --mist: #A8BFDC;
+    --ball: #E4F04C;
+    --coral: #FF9483;
+    --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--turf); }
+  body {
+    margin: 0; min-height: 100vh; color: var(--line); font: 400 1rem/1.5 var(--body);
+    background: var(--turf);
+  }
+  main { max-width: 480px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font: 700 2.4rem/1 var(--display); margin: 0 0 6px; letter-spacing: .01em; }
+  h2 { font: 700 1.35rem/1.2 var(--display); margin: 0 0 12px; display: flex; gap: 10px; align-items: baseline; }
+  h2 .n { color: var(--mist); font-weight: 500; }
+  p { margin: 0 0 12px; }
+  .sub { color: var(--mist); max-width: 34em; }
+  section { border-top: 2px solid var(--line); padding: 20px 0 8px; margin-top: 20px; }
+  [hidden] { display: none !important; }
+
+  /* camera diagram: the court seen from above */
+  .court { display: flex; gap: 16px; align-items: center; }
+  .court svg { flex: none; width: 92px; height: auto; }
+  .court p { color: var(--mist); font-size: .95rem; margin: 0; }
+
+  .field { margin: 14px 0; }
+  .field > span { display: block; font-weight: 600; margin-bottom: 6px; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg label { text-align: center; padding: 12px 8px; font-weight: 600; cursor: pointer; }
+  .seg label + input + label, .seg input + label ~ label { border-left: 2px solid var(--line); }
+  .seg input:checked + label { background: var(--line); color: var(--glass); }
+  .seg input:focus-visible + label { outline: 3px solid var(--ball); outline-offset: -5px; }
+
+  .buttons { display: grid; gap: 10px; }
+  button, .file-btn {
+    display: block; width: 100%; padding: 14px 16px; border-radius: 10px; font: 600 1.05rem var(--body);
+    text-align: center; cursor: pointer; border: 2px solid var(--line); background: transparent; color: var(--line);
+  }
+  .primary { background: var(--ball); border-color: var(--ball); color: var(--glass); }
+  button:focus-visible, .file-btn:focus-within { outline: 3px solid var(--ball); outline-offset: 3px; }
+  .file-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .note { color: var(--mist); font-size: .9rem; margin-top: 10px; }
+
+  /* processing */
+  .stages { list-style: none; padding: 0; margin: 0 0 16px; }
+  .stages li { padding: 8px 0 8px 28px; position: relative; color: var(--mist); }
+  .stages li::before {
+    content: ""; position: absolute; left: 4px; top: 15px; width: 10px; height: 10px; border-radius: 50%;
+    border: 2px solid var(--mist);
+  }
+  .stages li.now { color: var(--line); font-weight: 600; }
+  .stages li.now::before { border-color: var(--ball); background: var(--ball); animation: pulse 1.2s ease-in-out infinite; }
+  .stages li.done { color: var(--line); }
+  .stages li.done::before { background: var(--line); border-color: var(--line); }
+  @keyframes pulse { 50% { transform: scale(1.5); } }
+
+  /* result */
+  video { width: 100%; border-radius: 10px; background: var(--glass); display: block; }
+  .tabs { display: flex; gap: 8px; margin: 14px 0 0; flex-wrap: wrap; }
+  .tabs button { width: auto; padding: 8px 14px; font-size: .95rem; }
+  .tabs button[aria-selected="true"] { background: var(--line); color: var(--glass); }
+  .score { display: flex; align-items: flex-end; gap: 14px; margin: 18px 0 4px; }
+  .score b { font: 700 7.5rem/.8 var(--display); color: var(--ball); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .score span { font: 500 1.6rem/1 var(--display); color: var(--mist); padding-bottom: 8px; }
+  .meaning { color: var(--mist); font-size: .95rem; }
+  .fixes { list-style: none; margin: 0; padding: 0; counter-reset: fix; }
+  .fixes li { counter-increment: fix; padding: 12px 0 12px 40px; position: relative; border-bottom: 1px solid rgba(244, 248, 252, .25); }
+  .fixes li::before {
+    content: counter(fix); position: absolute; left: 0; top: 10px; width: 28px; height: 28px; border-radius: 50%;
+    border: 2px solid var(--line); text-align: center; font: 700 1rem/24px var(--display);
+  }
+  .quality { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; color: var(--mist); }
+  .quality strong { color: var(--line); font-weight: 600; }
+  .warn { border-left: 4px solid var(--coral); padding: 8px 12px; margin: 12px 0; background: rgba(255, 148, 131, .12); }
+  .problem { border: 2px solid var(--coral); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+  .problem h2 { color: var(--coral); }
+
+  @media (prefers-reduced-motion: reduce) { .stages li.now::before { animation: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Padel stroke check</h1>
+  <p class="sub">Film one forehand or backhand and see how close it is to eight professional players.</p>
+
+  <form id="setup">
+    <section>
+      <h2><span class="n">1</span> Set up the camera</h2>
+      <div class="court">
+        <svg viewBox="0 0 92 160" role="img" aria-label="Court seen from above, phone behind the near baseline">
+          <rect x="6" y="4" width="80" height="140" fill="none" stroke="#F4F8FC" stroke-width="2"/>
+          <line x1="6" y1="74" x2="86" y2="74" stroke="#F4F8FC" stroke-width="3"/>
+          <line x1="6" y1="40" x2="86" y2="40" stroke="#F4F8FC" stroke-width="1.5"/>
+          <line x1="6" y1="108" x2="86" y2="108" stroke="#F4F8FC" stroke-width="1.5"/>
+          <line x1="46" y1="40" x2="46" y2="108" stroke="#F4F8FC" stroke-width="1.5"/>
+          <circle cx="60" cy="122" r="5" fill="#E4F04C"/>
+          <rect x="40" y="149" width="12" height="9" rx="2" fill="#E4F04C"/>
+          <path d="M46 149 L30 128 M46 149 L62 128" stroke="#E4F04C" stroke-width="1.5" stroke-dasharray="3 3"/>
+        </svg>
+        <p>Put the phone on a tripod behind the baseline, filming the player from behind. Keep the whole body and racket in view, and film one player at a time.</p>
+      </div>
+      <div class="field">
+        <span id="hand-label">Racket hand</span>
+        <div class="seg" role="radiogroup" aria-labelledby="hand-label">
+          <input type="radio" name="hand" id="hand-right" value="right" checked><label for="hand-right">Right</label>
+          <input type="radio" name="hand" id="hand-left" value="left"><label for="hand-left">Left</label>
+        </div>
+      </div>
+      <div class="field">
+        <span id="stroke-label">Stroke</span>
+        <div class="seg" role="radiogroup" aria-labelledby="stroke-label">
+          <input type="radio" name="stroke" id="stroke-fh" value="forehand" checked><label for="stroke-fh">Forehand</label>
+          <input type="radio" name="stroke" id="stroke-bh" value="backhand"><label for="stroke-bh">Backhand</label>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2><span class="n">2</span> Add a clip</h2>
+      <div class="buttons">
+        <label class="file-btn primary">Record a clip<input type="file" accept="video/*" capture="environment" data-clip></label>
+        <label class="file-btn">Choose from gallery<input type="file" accept="video/*" data-clip></label>
+      </div>
+      <p class="note">Keep it under 20 seconds, with one or two strokes. The video is deleted from the laptop after it is analysed.</p>
+    </section>
+  </form>
+
+  <section id="working" hidden aria-live="polite">
+    <h2><span class="n">3</span> Analysing your clip</h2>
+    <ol class="stages" id="stages">
+      <li data-stage="upload">Uploading the clip</li>
+      <li data-stage="queued">Waiting for the laptop</li>
+      <li data-stage="pose">Finding your body in every frame</li>
+      <li data-stage="analysis">Finding the swing and comparing it with the pros</li>
+      <li data-stage="overlay">Drawing your skeleton video</li>
+    </ol>
+    <p class="note">Pose detection runs on the laptop's CPU, so a 10 second clip can take about a minute.</p>
+  </section>
+
+  <section id="problem" hidden>
+    <div class="problem" role="alert">
+      <h2 id="problem-title">Couldn't score this clip</h2>
+      <p id="problem-text"></p>
+    </div>
+    <button type="button" class="primary" data-restart>Try another clip</button>
+  </section>
+
+  <section id="result" hidden>
+    <h2><span class="n">3</span> <span>Your <span id="r-stroke">forehand</span></span></h2>
+    <video id="r-video" controls playsinline muted loop></video>
+    <div class="tabs" id="r-tabs" role="tablist" aria-label="Swings found"></div>
+    <div class="score"><b id="r-score">0</b><span>out of 100</span></div>
+    <p class="meaning">How similar this swing is to the professional reference. It is not a verdict on right or wrong technique.</p>
+    <div id="r-warnings"></div>
+    <h2>Biggest differences from the pros</h2>
+    <ol class="fixes" id="r-fixes"></ol>
+    <div class="quality"><span>Pose confidence</span><strong id="r-conf"></strong></div>
+    <div class="buttons"><button type="button" class="primary" data-restart>Record another clip</button></div>
+  </section>
+</main>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const screens = { setup: $("#setup"), working: $("#working"), problem: $("#problem"), result: $("#result") };
+const ORDER = ["upload", "queued", "pose", "analysis", "overlay"];
+
+function show(name) {
+  for (const [k, el] of Object.entries(screens)) el.hidden = k !== name;
+  window.scrollTo({ top: 0 });
+}
+
+function stage(name) {
+  const at = ORDER.indexOf(name);
+  document.querySelectorAll("#stages li").forEach((li, i) => {
+    li.className = i < at ? "done" : i === at ? "now" : "";
+  });
+}
+
+function problem(title, text) {
+  $("#problem-title").textContent = title;
+  $("#problem-text").textContent = text;
+  show("problem");
+}
+
+const UNREACHABLE = "Cannot reach the server. Check that you are on the same Wi-Fi as the laptop.";
+
+async function upload(file) {
+  const form = new FormData();
+  form.append("video", file);
+  form.append("hand", document.querySelector("input[name=hand]:checked").value);
+  form.append("stroke_type", document.querySelector("input[name=stroke]:checked").value);
+  show("working");
+  stage("upload");
+  let res;
+  try {
+    res = await fetch("/analyze", { method: "POST", body: form });
+  } catch {
+    return problem("No connection", UNREACHABLE);
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    return problem("Upload refused", body.detail || `The server answered ${res.status}.`);
+  }
+  const { job_id } = await res.json();
+  poll(job_id);
+}
+
+async function poll(job) {
+  let s;
+  try {
+    s = await (await fetch(`/status/${job}`)).json();
+  } catch {
+    return problem("No connection", UNREACHABLE);
+  }
+  if (s.state === "error") return problem("Analysis failed", s.message || "The laptop could not analyse this clip.");
+  if (s.state === "done") return finish(job);
+  stage(s.state === "queued" ? "queued" : (ORDER.includes(s.stage) ? s.stage : "pose"));
+  setTimeout(() => poll(job), 1000);
+}
+
+async function finish(job) {
+  const r = await (await fetch(`/result/${job}`)).json();
+  if (r.failure) return problem("Couldn't score this clip", r.failure.message);
+  $("#r-stroke").textContent = r.stroke_type;
+  $("#r-video").src = `/video/${job}`;
+  const warn = $("#r-warnings");
+  warn.replaceChildren(...r.warnings.map((w) => Object.assign(document.createElement("p"), { className: "warn", textContent: w })));
+  const tabs = $("#r-tabs");
+  tabs.replaceChildren();
+  if (r.strokes.length > 1) {
+    r.strokes.forEach((s, i) => {
+      const b = Object.assign(document.createElement("button"), { type: "button", textContent: `Swing ${i + 1}` });
+      b.setAttribute("role", "tab");
+      b.onclick = () => pick(r, i, job);
+      tabs.append(b);
+    });
+  }
+  pick(r, 0, job);
+  show("result");
+}
+
+function pick(r, i, job) {
+  const s = r.strokes[i];
+  document.querySelectorAll("#r-tabs button").forEach((b, k) => b.setAttribute("aria-selected", String(k === i)));
+  $("#r-score").textContent = Math.round(s.score);
+  $("#r-fixes").replaceChildren(...s.feedback.map((f) => Object.assign(document.createElement("li"), { textContent: f.text })));
+  $("#r-conf").textContent = `${Math.round(100 * s.confidence)}%`;
+  const v = $("#r-video");
+  if (r.fps && v.readyState >= 1) v.currentTime = s.start_frame / r.fps;
+  else v.onloadedmetadata = () => { if (r.fps) v.currentTime = s.start_frame / r.fps; };
+}
+
+document.querySelectorAll("[data-clip]").forEach((input) =>
+  input.addEventListener("change", () => { if (input.files[0]) upload(input.files[0]); input.value = ""; }));
+document.querySelectorAll("[data-restart]").forEach((b) => b.addEventListener("click", () => show("setup")));
+</script>
+</body>
+</html>
