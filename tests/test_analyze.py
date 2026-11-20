@@ -62,6 +62,23 @@ def test_missing_racket_arm_means_low_pose_quality():
     assert r["failure"]["code"] == "low_pose_quality"
 
 
+def test_analyze_clip_reports_stages_and_their_timings(tmp_path):
+    import cv2
+    from padel.analyze import analyze_clip
+
+    video = tmp_path / "clip.mp4"
+    vw = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*"mp4v"), 30, (64, 64))
+    for _ in range(10):
+        vw.write(np.zeros((64, 64, 3), np.uint8))
+    vw.release()
+    fake_pose = lambda v, w: dict(keypoints=player(150, swing_at=75), fps=30.0, warnings=[])
+    stages = []
+    result, kp = analyze_clip(video, "right", "forehand", "unused.pt", progress=stages.append, pose=fake_pose)
+    assert stages == ["pose", "analysis"]
+    assert result["failure"] is None and kp.shape == (150, 17, 3)
+    assert set(result["timings_s"]) == {"pose", "analysis"} and all(t >= 0 for t in result["timings_s"].values())
+
+
 def test_feedback_text_says_bent_or_straight_for_joints():
     assert "more bent" in feedback_text(Deviation("elbow_angle", "at", "lower", 18.4, -2.5))
     assert "straighter" in feedback_text(Deviation("knee_angle_dom", "before", "higher", 12.0, 2.2))

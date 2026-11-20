@@ -34,3 +34,24 @@ Decision: use YOLO11-pose as the main model for the pro footage. Re-test MediaPi
 | Tests | 37 passing |
 
 Not yet measured: hitter accuracy, contact error in frames, keypoint availability on phone clips, pose-to-score latency.
+
+## YOLO11 sizes and phone pipeline stages (2026-11-20)
+
+Script: `scripts/bench_sizes.py`. Clip: the Ultralytics sample photo `zidane.jpg` scaled to 1920x1080 and repeated
+for 60 frames (no real padel clip was available; YOLO's work per frame barely depends on the content, so this
+measures speed, not accuracy). Machine: Windows laptop, CPU AMD64 Family 23 Model 96 (12 threads), GPU NVIDIA
+GeForce GTX 1650 Ti (4 GB); Python 3.13, ultralytics 8.3.177, torch 2.14.1+cu126. One warm-up frame not timed.
+
+| Device | YOLO11n-pose | YOLO11s-pose | YOLO11m-pose |
+|---|---|---|---|
+| CPU | 0.064 s/frame (15.7 fps) | 0.114 s/frame (8.8 fps) | 0.224 s/frame (4.5 fps) |
+| GPU | 0.034 s/frame (29.3 fps) | 0.037 s/frame (26.8 fps) | 0.030 s/frame (33.6 fps) |
+| 10 s clip at 30 fps, CPU | 19 s | 34 s | 67 s |
+| 10 s clip at 30 fps, GPU | 10 s | 11 s | 9 s |
+
+- The CPU medium figure (0.224) matches the 2026-11-08 benchmark on a different laptop (0.227).
+- GPU timings vary between runs: an earlier run on the same machine gave 0.019, 0.020 and 0.030 s per frame. On the GPU the three sizes take about the same time, so model size is not the bottleneck there.
+- Ultralytics uses a CUDA GPU automatically when PyTorch sees one; `yolo_detector(weights, device="cpu")` forces the CPU.
+- Other stages: cleaning and smoothing 0.05 ms per frame; analysis (left/right fix, features, swings, scoring) 0.07 to 0.09 s for a 300-frame synthetic clip with one swing; overlay drawing plus H.264 encoding 1.7 to 1.9 s for 60 frames of 1080p.
+- Reading: pose is almost all of the latency. On CPU only, YOLO11m misses the 60 s target for a 10 s clip; s or n fit, at lower published accuracy (COCO pose mAP50-95: n 50.0, s 58.9, m 64.9). See [model-choice.md](model-choice.md).
+- Not measured yet: the same numbers on a real phone clip, and upload time over Wi-Fi.

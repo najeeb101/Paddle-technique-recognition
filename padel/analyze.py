@@ -6,6 +6,7 @@ with the racket arm seen); distance from the reliable reference range is not par
 """
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 import numpy as np
@@ -112,16 +113,24 @@ def clip_seconds(video: str | Path) -> float:
 
 
 def analyze_clip(video: str | Path, hand: str, stroke_type: str, weights: str | Path,
-                 ref_dir: str | Path = Path(__file__).resolve().parents[1] / "reference", progress=print):
-    """Full phone-clip analysis. Returns (result dict, cleaned keypoints or None). `progress` gets stage names."""
-    from .pose import clip_keypoints
+                 ref_dir: str | Path = Path(__file__).resolve().parents[1] / "reference", progress=print, pose=None):
+    """Full phone-clip analysis. Returns (result dict, cleaned keypoints or None).
+
+    `progress` gets stage names; `pose(video, weights)` defaults to `padel.pose.clip_keypoints` (tests pass a fake).
+    The result's `timings_s` holds seconds per stage, for the latency measurement.
+    """
+    if pose is None:
+        from .pose import clip_keypoints as pose
 
     ref = load_reference(Path(ref_dir) / f"{stroke_type}.npz")
     if clip_seconds(video) > MAX_CLIP_S:
         return failed(empty_result(Path(video).name, hand, stroke_type, 0.0), "clip_too_long"), None
     progress("pose")
-    p = clip_keypoints(video, weights)
+    t0 = time.perf_counter()
+    p = pose(video, weights)
+    t1 = time.perf_counter()
     progress("analysis")
     result = analyze_keypoints(p["keypoints"], p["fps"], hand, stroke_type, ref, clip=Path(video).name,
                                warnings=p["warnings"])
+    result["timings_s"] = {"pose": round(t1 - t0, 2), "analysis": round(time.perf_counter() - t1, 2)}
     return result, p["keypoints"]

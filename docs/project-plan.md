@@ -30,9 +30,9 @@ MATLAB track (section 10) that implements DTW from scratch, runs the simulation 
 evaluation plots from the keypoint files the Python side writes. It must be staffed from week 1; it
 cannot be added at the end.
 
-## Progress (updated 2026-11-18)
+## Progress (updated 2026-11-20)
 
-Python pipeline from pro data to a score exists and is tested (37 tests, `py -m pytest -q`). The score does not yet separate strokes well enough to ship, and nothing user-facing exists.
+Python pipeline from pro data to a score exists and is tested (62 tests, `py -m pytest -q`). The phone app runs end to end (`py -m padel.server`) but has not yet been tried on a real padel clip. The score does not yet separate strokes well enough to ship.
 
 ### Done
 
@@ -51,6 +51,11 @@ Python pipeline from pro data to a score exists and is tested (37 tests, `py -m 
 | Day 8 scoring | Built per design 7.3, `wrist_speed` left out (circular) | `padel/scoring.py` |
 | Day 9 first hold-out check | Run; weak (below) | `scripts/eval_holdout.py` |
 | Day 11 phone clip pose pipeline | Done: decode, pose, pick person, clean, fill gaps, smooth | `padel/pose.py`, `scripts/clip_to_keypoints.py` |
+| Day 11 swing detection on player clips | Built (design 6.1); thresholds unchecked on real clips | `padel/swings.py` |
+| Day 12 `analyze_clip` | Built: result JSON per design 3.4 with failure codes; checked on synthetic and static clips only | `padel/analyze.py` |
+| Days 10, 12-13, 16 overlay, server, phone page, error messages | Built: H.264 overlay, FastAPI with one background worker, phone page, skeleton-only option | `padel/overlay.py`, `padel/server/` |
+| Day 17 latency (first pass) | Measured per stage; pose dominates (CPU: 67 s per 10 s clip with YOLO11m, 34 s with s, 19 s with n) | `docs/measurements.md`, `scripts/bench_sizes.py` |
+| Model choice write-up | Done: why YOLO11-pose and COCO-17, alternatives, evidence, open questions | `docs/model-choice.md` |
 
 First hold-out result (80/20 stroke split, seed 0): held-out forehands score 94.0 against the forehand reference and 88.6 against the backhand one (higher for the right type in 80% of strokes); backhands 94.9 against 92.7 (61%). Scores saturate near 94, so the score is not usable yet.
 
@@ -62,13 +67,11 @@ First hold-out result (80/20 stroke split, seed 0): held-out forehands score 94.
 | 2 | Flawed-stroke test: offset one feature of real strokes, check the score drops and the right feature is named; write `docs/results.md` | 8-9 |
 | 3 | Decide leave-players-out splits. Player identity is not tracked, so a leave-match-out split (women vs men) or a hand-labelled player map is needed | 7 |
 | 4 | Compare dataset poses with re-run YOLO poses on about 50 windows | 9-10 |
-| 5 | Swing detection on player clips (design 6.1); only the pro-window version exists | 11 |
-| 6 | `analyze_clip(video, hand, stroke)` joining detection, features, reference, scoring; result JSON per design 3.4 | 12 |
-| 7 | Overlay video (H.264), FastAPI server with background job, phone page, error messages (design 8) | 10, 12-13, 16 |
-| 8 | Film consented clips (20 per stroke, 2 players), failure log, own-clip evaluation, coach ratings if possible | 13-14, 16 |
-| 9 | Hitter accuracy count on 40 windows, contact error in frames, handedness check by a padel player | 3-4 |
-| 10 | Latency measurement and speed pass | 17 |
-| 11 | Report, demo script and backup video, oral exam dry run | 18-20 |
+| 5 | Try the phone app on real padel clips from a phone over Wi-Fi; check the swing thresholds and the "low reference confidence" warning (not built) | 11-13 |
+| 6 | Film consented clips (20 per stroke, 2 players), failure log, own-clip evaluation, coach ratings if possible | 13-14, 16 |
+| 7 | Hitter accuracy count on 40 windows, contact error in frames, handedness check by a padel player | 3-4 |
+| 8 | Speed pass: decide the YOLO11 size for CPU-only laptops (m misses 60 s on CPU) after an accuracy check | 17 |
+| 9 | Report, demo script and backup video, oral exam dry run | 18-20 |
 
 Open outside the code: written instructor approval, whether the phone app meets the "camera sensor connected to MATLAB" requirement, demo timing, footage rights for the pro video, and a fifth member (the team has four). A padel player should settle the 7 ambiguous forehand labels.
 

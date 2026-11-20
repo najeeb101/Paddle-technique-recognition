@@ -87,14 +87,17 @@ def extract_keypoints(frames, detect):
     return np.array(rows, dtype=np.float32).reshape(-1, 17, 3), warnings
 
 
-def yolo_detector(weights: str | Path):
-    """Wrap an Ultralytics YOLO pose model as a `detect` function for `extract_keypoints`."""
+def yolo_detector(weights: str | Path, device: str | None = None):
+    """Wrap an Ultralytics YOLO pose model as a `detect` function for `extract_keypoints`.
+
+    `device` is "cpu", "0" (first GPU) or None to let Ultralytics pick (a CUDA GPU if PyTorch can see one).
+    """
     from ultralytics import YOLO
 
     model = YOLO(str(weights))
 
     def detect(frame):
-        r = model(frame, verbose=False)[0]
+        r = model(frame, verbose=False, device=device)[0]
         if r.keypoints is None or r.keypoints.conf is None:
             return np.zeros((0, 4)), np.zeros((0, 17, 3))
         xy, conf = r.keypoints.xy.cpu().numpy(), r.keypoints.conf.cpu().numpy()

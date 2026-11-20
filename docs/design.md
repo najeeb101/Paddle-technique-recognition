@@ -343,15 +343,21 @@ padel/
   features.py    per-frame features, mirroring, left/right swap fix
   reference.py   resampling, DTW, medoid, reference build
   scoring.py     score and feedback
+  swings.py      swing detection on player clips (section 6.1)
+  analyze.py     analyze_clip: clip -> result JSON (section 3.4)
+  overlay.py     skeleton overlay video, H.264
+  server/        FastAPI app (section 3.5), phone page in static/, `py -m padel.server`
 scripts/         one script per pipeline step and check (see README)
-tests/           unit tests on synthetic data (37)
+tests/           unit tests on synthetic data (62)
 reference/       forehand.npz, backhand.npz (committed, small)
 data/            large and derived data (git-ignored)
 docs/            this documentation
 ```
 
-Not written yet: `analyze_clip`, swing detection for player clips, the overlay renderer, the FastAPI
-server and phone page (a proposed `src/padel/server/`).
+Phone path notes (2026-11-20): missing keypoints are stored as x = y = NaN, conf = 0. `confidence` in the
+result is pose-based only (share of measured values and of frames with the racket arm seen); the
+"low reference confidence" check of section 8.2 is not built. Swing thresholds (3x median, at least
+2 torso lengths per second, 0.8 s gap, 0.7 s each side) are proposals to check on real clips.
 
 ## 10. Testing
 

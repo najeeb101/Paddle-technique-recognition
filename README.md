@@ -70,6 +70,7 @@ docs/
   pipeline.md       step-by-step guide to the code, files and methods
   results.md        every finding so far, failures, and what is left
   label-suspects.md forehand labels that look wrong
+  model-choice.md   why YOLO11-pose and COCO-17, alternatives, evidence
 padel/              pipeline package; scripts/ and tests/ alongside; reference/ holds the built references
 ```
 
@@ -82,9 +83,9 @@ The MATLAB track is conditional and not started.
 - A phone on a tripod as the fixed camera, and a laptop as the server
 - MATLAB only if the instructor requires it (see the conditional track in the plan)
 
-## Current status (2026-11-18)
+## Current status (2026-11-20)
 
-The specification and plan are in `docs/`; `docs/project-plan.md` has the full done and left lists. Implemented (`padel/`, `scripts/`, `tests/`, 37 tests):
+The specification and plan are in `docs/`; `docs/project-plan.md` has the full done and left lists. Implemented (`padel/`, `scripts/`, `tests/`, 62 tests):
 
 - PadelTracker100 loaders and stroke-window grouping (575 windows: 293 forehand, 282 backhand)
 - A position-based four-player tracker; per-window hitter and contact frame
@@ -93,12 +94,17 @@ The specification and plan are in `docs/`; `docs/project-plan.md` has the full d
 - Pose model chosen (YOLO11-pose, `docs/measurements.md`); phone clip pose extraction with cleaning, gap filling and smoothing
 - Ten per-frame features, with a fix for the pose model's mid-stroke left/right swaps
 - Hand-written DTW, medoid reference (`reference/forehand.npz`, `reference/backhand.npz`) and scoring with feedback
+- Phone app: swing detection on clips, `analyze_clip` (result JSON with failure codes), H.264 skeleton overlay, FastAPI server and phone page
+- Per-stage latency and YOLO11 size benchmark (`docs/measurements.md`); model choice explained in `docs/model-choice.md`
 
 First hold-out check: held-out strokes score about 94 against the right reference and 89-93 against the wrong one, so the score barely discriminates (61-80% correct ordering). Tuning it is next.
 
-Not built: swing detection on phone clips, `analyze_clip`, overlay video, FastAPI server and phone page, flawed-stroke and own-clip evaluation, failure log, report.
+Not done: trying the phone app on a real padel clip, flawed-stroke and own-clip evaluation, failure log, report.
 Still open: rights to use the professional match video, written confirmation of the instructor's approval, the phone-app vs "camera sensor connected to MATLAB" question, and a fifth member.
 
-Run: `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe matplotlib`, then `py -m pytest -q`.
+Run: `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe matplotlib fastapi uvicorn python-multipart`, then `py -m pytest -q`.
+
+Phone app: put `yolo11m-pose.pt` in a `models/` folder next to the repo (or set `PADEL_WEIGHTS`), have ffmpeg on the PATH,
+run `py -m padel.server`, and open the printed address on a phone on the same Wi-Fi.
 Pipeline order (each script documents its arguments): `build_strokes_index.py`, `infer_hitters.py`, `finalize_index.py`,
 `build_stroke_features.py`, `build_reference.py`; `eval_holdout.py` runs the hold-out check.

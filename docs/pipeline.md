@@ -2,7 +2,7 @@
 
 How the code turns the PadelTracker100 labels into a reference and a score, step by step. Status as of 2026-11-18. Design intent is in [design.md](design.md); numbers are in [measurements.md](measurements.md) and [results.md](results.md).
 
-Setup (Windows, Python 3.14 via the `py` launcher): `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe matplotlib`. The dataset lives outside the repo (`C:\Users\ACER\datasets\padeltracker100\extracted`, labels in `labels/`); `data/` is git-ignored. Tests: `py -m pytest -q` (37 pass).
+Setup (Windows, Python 3.14 via the `py` launcher): `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe matplotlib fastapi uvicorn python-multipart`, plus ffmpeg on the PATH for the H.264 overlay. The dataset lives outside the repo (`C:\Users\ACER\datasets\padeltracker100\extracted`, labels in `labels/`); `data/` is git-ignored. Tests: `py -m pytest -q` (62 pass).
 
 ## Steps in run order
 
@@ -17,7 +17,7 @@ Setup (Windows, Python 3.14 via the `py` launcher): `py -m pip install numpy ope
 | 7 | `build_reference.py` | features npz | `reference/forehand.npz`, `backhand.npz` | Resamples, runs DTW to the medoid, averages along the paths. Excludes the 13 strokes in `docs/label-suspects.md`. |
 | 8 | `eval_holdout.py` | features npz, optional seed | printed scores | 80/20 split per type, own-type against wrong-type reference. |
 
-Other scripts: `bench_pose.py` (YOLO11-pose vs MediaPipe), `check_lr.py` (draws keypoints by their names to settle left/right), `check_tracking.py`, `check_hitters.py`, `make_check_sheets.py` (hand-check sheets), `handedness.py` (old rule-based vote, not used), `clip_to_keypoints.py` (phone clip to cleaned keypoints), `score_check.py`. Each script's docstring gives its arguments.
+Other scripts: `bench_pose.py` (YOLO11-pose vs MediaPipe), `check_lr.py` (draws keypoints by their names to settle left/right), `check_tracking.py`, `check_hitters.py`, `make_check_sheets.py` (hand-check sheets), `handedness.py` (old rule-based vote, not used), `clip_to_keypoints.py` (phone clip to cleaned keypoints), `bench_sizes.py` (YOLO11 n/s/m speed on CPU and GPU, plus the other pipeline stages), `score_check.py`. Each script's docstring gives its arguments.
 
 Gotchas: use `py`, not `python`; Python needs `C:/...` style paths where Git Bash shows `/c/...`; step 6 and 7 take tens of seconds to minutes, so run them in the background.
 
@@ -74,6 +74,15 @@ Counts: 174 forehand strokes (187 minus the 13 suspects) and 155 backhand.
 
 `wrist_speed` is excluded from scoring by default because contact is defined from its peak (circular). It is a function parameter.
 
-## Phone clip path (partly built)
+## Phone clip path (built 2026-11-20, not yet tried on a real padel clip)
 
-`padel/pose.py` and `scripts/clip_to_keypoints.py` turn one clip into cleaned keypoints: decode, YOLO11-pose, pick the largest person, mask confidence below 0.3, fill gaps up to 3 frames, Savitzky-Golay smoothing (window 7, order 2). Not built: swing detection on clips, `analyze_clip`, overlay, server, web page.
+Start the app with `py -m padel.server` and open the printed address on a phone on the same Wi-Fi (Windows may ask to allow Python through the firewall). The weights default to `../models/yolo11m-pose.pt` next to the repo; set `PADEL_WEIGHTS` to use another file. Jobs and overlays go to `data/jobs/` (git-ignored); uploads are deleted after processing.
+
+| Stage | Code | What it does |
+|---|---|---|
+| Pose | `padel/pose.py` (`clip_keypoints`) | Decode, YOLO11-pose, keep the largest person (warning if more than one), mask confidence below 0.3, fill gaps up to 3 frames, Savitzky-Golay smoothing (window 7, order 2). Missing points are NaN with conf 0 |
+| Left/right fix and features | `fix_lr_all`, `stroke_features` | Same code as the pro strokes, so reference and player match |
+| Swings | `padel/swings.py` (`detect_swings`) | Racket wrist speed, 5-frame moving average, peaks above 3x the clip median and 2 torso lengths per second, at least 0.8 s apart; window to where speed drops below 1.5x the median, at most 0.7 s each side |
+| Scoring | `padel/analyze.py` (`analyze_keypoints`) | Each swing with the racket arm seen in at least half its frames goes to `score_stroke`; feedback becomes plain sentences. Failures instead of scores: `clip_too_long` (over 20 s), `no_person`, `no_swing`, `low_pose_quality` |
+| Overlay | `padel/overlay.py` | Skeleton on every frame, score label during each swing, a ring on the wrist at contact; optional skeleton-only (no footage); H.264 via ffmpeg |
+| Server and page | `padel/server/` | API of design 3.5, one job at a time in a background thread, timings per stage in the result (`timings_s`), phone page in `static/index.html` |

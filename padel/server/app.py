@@ -9,6 +9,7 @@ import os
 import queue
 import shutil
 import threading
+import time
 import traceback
 import uuid
 from contextlib import asynccontextmanager
@@ -25,7 +26,7 @@ VIDEO_EXT = {".mp4", ".mov", ".m4v", ".webm", ".avi", ".3gp"}
 
 def default_analyzer(weights):
     """The real analysis: pose, swings, scores (analyze_clip), then the overlay video."""
-    def run(video, hand, stroke_type, job_dir, progress):
+    def run(video, hand, stroke_type, job_dir, progress, skeleton_only=False):
         from padel.analyze import analyze_clip
         from padel.overlay import render_overlay
 
@@ -33,12 +34,15 @@ def default_analyzer(weights):
         if kp is None:
             return result, None
         progress("overlay")
-        return result, render_overlay(video, kp, result, job_dir / "overlay.mp4")
+        t0 = time.perf_counter()
+        overlay = render_overlay(video, kp, result, job_dir / "overlay.mp4", blank=skeleton_only)
+        result.setdefault("timings_s", {})["overlay"] = round(time.perf_counter() - t0, 2)
+        return result, overlay
     return run
 
 
 def create_app(analyzer=None, workdir=None, keep_uploads: bool = False) -> FastAPI:
-    """`analyzer(video, hand, stroke_type, job_dir, progress) -> (result dict, overlay path or None)`."""
+    """`analyzer(video, hand, stroke_type, job_dir, progress, skeleton_only) -> (result dict, overlay path or None)`."""
     workdir = Path(workdir or ROOT / "data" / "jobs")
     if analyzer is None:
         analyzer = default_analyzer(os.environ.get("PADEL_WEIGHTS", ROOT.parent / "models" / "yolo11m-pose.pt"))
@@ -52,10 +56,11 @@ def create_app(analyzer=None, workdir=None, keep_uploads: bool = False) -> FastA
 
     def worker():
         while (item := todo.get()) is not None:
-            job, video, hand, stroke_type = item
+            job, video, hand, stroke_type, skeleton_only = item
             update(job, state="running", stage="starting")
             try:
-                result, overlay = analyzer(video, hand, stroke_type, workdir / job, lambda s: update(job, stage=s))
+                result, overlay = analyzer(video, hand, stroke_type, workdir / job, lambda s: update(job, stage=s),
+                                           skeleton_only=skeleton_only)
                 outcome = dict(state="done", stage=None, result=result, video=str(overlay) if overlay else None)
             except Exception:  # any crash becomes a readable job error, never a dead server
                 traceback.print_exc()  # full details stay in the server window
@@ -84,7 +89,8 @@ def create_app(analyzer=None, workdir=None, keep_uploads: bool = False) -> FastA
         return FileResponse(STATIC / "index.html")
 
     @app.post("/analyze")
-    def analyze(video: UploadFile = File(...), hand: str = Form(...), stroke_type: str = Form(...)):
+    def analyze(video: UploadFile = File(...), hand: str = Form(...), stroke_type: str = Form(...),
+                skeleton_only: bool = Form(False)):
         if hand not in HANDS:
             raise HTTPException(400, "hand must be right or left")
         if stroke_type not in STROKES:
@@ -99,7 +105,7 @@ def create_app(analyzer=None, workdir=None, keep_uploads: bool = False) -> FastA
             shutil.copyfileobj(video.file, fh)
         with lock:
             jobs[job] = dict(state="queued", stage=None)
-        todo.put((job, path, hand, stroke_type))
+        todo.put((job, path, hand, stroke_type, skeleton_only))
         return {"job_id": job}
 
     @app.get("/status/{job}")

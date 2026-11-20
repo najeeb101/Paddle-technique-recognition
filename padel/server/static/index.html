@@ -56,6 +56,9 @@
   button:focus-visible, .file-btn:focus-within { outline: 3px solid var(--ball); outline-offset: 3px; }
   .file-btn input { position: absolute; width: 1px; height: 1px; opacity: 0; }
   .note { color: var(--mist); font-size: .9rem; margin-top: 10px; }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 14px; cursor: pointer; }
+  .check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--ball); flex: none; }
+  .check input:focus-visible { outline: 3px solid var(--ball); outline-offset: 2px; }
 
   /* processing */
   .stages { list-style: none; padding: 0; margin: 0 0 16px; }
@@ -133,6 +136,7 @@
 
     <section>
       <h2><span class="n">2</span> Add a clip</h2>
+      <label class="check"><input type="checkbox" id="skeleton-only"> Show only my skeleton in the result video, not the footage</label>
       <div class="buttons">
         <label class="file-btn primary">Record a clip<input type="file" accept="video/*" capture="environment" data-clip></label>
         <label class="file-btn">Choose from gallery<input type="file" accept="video/*" data-clip></label>
@@ -205,6 +209,7 @@ async function upload(file) {
   form.append("video", file);
   form.append("hand", document.querySelector("input[name=hand]:checked").value);
   form.append("stroke_type", document.querySelector("input[name=stroke]:checked").value);
+  form.append("skeleton_only", String($("#skeleton-only").checked));
   show("working");
   stage("upload");
   let res;

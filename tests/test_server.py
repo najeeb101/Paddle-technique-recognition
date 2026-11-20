@@ -6,14 +6,14 @@ from padel.server.app import create_app
 RESULT = {"clip": "c.mp4", "hand": "right", "stroke_type": "forehand", "strokes": [], "warnings": [], "failure": None}
 
 
-def fake_analyzer(video, hand, stroke_type, job_dir, progress):
+def fake_analyzer(video, hand, stroke_type, job_dir, progress, skeleton_only=False):
     progress("pose")
     out = job_dir / "overlay.mp4"
     out.write_bytes(b"fake mp4")
-    return {**RESULT, "hand": hand, "stroke_type": stroke_type}, out
+    return {**RESULT, "hand": hand, "stroke_type": stroke_type, "skeleton_only": skeleton_only}, out
 
 
-def broken_analyzer(video, hand, stroke_type, job_dir, progress):
+def broken_analyzer(video, hand, stroke_type, job_dir, progress, skeleton_only=False):
     raise RuntimeError(f"cannot open video {video}")
 
 
@@ -43,6 +43,16 @@ def test_upload_runs_a_job_and_serves_result_and_video(tmp_path):
         res = c.get(f"/result/{job}").json()
         assert res["hand"] == "left" and res["stroke_type"] == "backhand"
         assert c.get(f"/video/{job}").content == b"fake mp4"
+
+
+def test_skeleton_only_choice_reaches_the_analyzer(tmp_path):
+    with client(tmp_path) as c:
+        on = c.post("/analyze", data={"hand": "right", "stroke_type": "forehand", "skeleton_only": "true"},
+                    files={"video": ("clip.mp4", b"\x00" * 100, "video/mp4")}).json()["job_id"]
+        off = upload(c).json()["job_id"]
+        wait_until_finished(c, on), wait_until_finished(c, off)
+        assert c.get(f"/result/{on}").json()["skeleton_only"] is True
+        assert c.get(f"/result/{off}").json()["skeleton_only"] is False
 
 
 def test_uploaded_video_is_deleted_after_processing(tmp_path):
