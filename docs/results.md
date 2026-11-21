@@ -1,6 +1,6 @@
 # Results and findings log
 
-Everything measured or found so far, with the evidence and what is still unverified. Updated 2026-11-18. No claim here is stronger than the check behind it.
+Everything measured or found so far, with the evidence and what is still unverified. Updated 2026-11-21. No claim here is stronger than the check behind it.
 
 ## 1. Data
 
@@ -35,12 +35,43 @@ At contact a right-hander seen from behind should have the racket wrist right of
 
 ## 6. Scoring hold-out (seed 0, 80/20 per type)
 
+### Current scorer (2026-11-21: continuous similarity, softness 2, worst mix 0.5)
+
+| Held-out | n | Own-type score (mean, sd) | Wrong-type score (mean, sd) | Own higher |
+|---|---|---|---|---|
+| Forehand | 35 | 84.6 (7.5) | 77.3 (9.2) | 86% |
+| Backhand | 31 | 85.2 (5.0) | 81.2 (7.6) | 65% |
+
+Own-type range: forehand 57 to 94, backhand 74 to 95. Better than the first scorer below (80% / 61%), but backhand vs forehand is still weak.
+
+### First scorer (2026-11-18: share of steps with |z| <= 2)
+
 | Held-out | n | Own-type score (mean, sd) | Wrong-type score (mean, sd) | Own higher |
 |---|---|---|---|---|
 | Forehand | 35 | 94.0 (7.7) | 88.6 (9.6) | 80% |
 | Backhand | 31 | 94.9 (4.3) | 92.7 (6.3) | 61% |
 
 Own-type range: forehand 63 to 100, backhand 83 to 100; no stroke scores below 50. Reading: the score saturates near 94, so it cannot yet tell a good stroke from a poor one, and only weakly tells forehand from backhand. Likely causes: wide std bands (almost any plausible stroke is within 2 std), DTW absorbing timing and shape differences, and the 2 std limit being loose. Not yet tried: a z limit of 1 or less, a smaller std floor, scoring without whole-stroke DTW alignment. This hold-out has been looked at once; tune on folds of the build set only (plan day 15) and take the final numbers from a fresh split or from the team's own clips.
+
+## 6b. Flawed-stroke test (`scripts/eval_flawed.py`, 2026-11-21)
+
+Each held-out stroke is scored clean and with one synthetic fault (elbow 20 degrees more bent, racket knee 20 degrees straighter, shoulder line rotated 20 degrees, wrist 0.3 torso lengths lower, contact 0.1 s late). AUC = chance a clean stroke beats a flawed one across strokes (0.5 = no separation). "Dropped" = share of strokes whose own flawed copy scores lower.
+
+| Fault (size x1) | First scorer AUC (FH / BH) | Current AUC (FH / BH) | Current dropped (FH / BH) | Ceiling AUC (FH / BH) |
+|---|---|---|---|---|
+| Elbow | 0.57 / 0.53 | 0.54 / 0.53 | 60% / 61% | 0.56 / 0.50 |
+| Knee | 0.58 / 0.51 | 0.55 / 0.58 | 51% / 74% | 0.47 / 0.65 |
+| Rotation | 0.59 / 0.58 | 0.64 / 0.64 | 80% / 100% | 0.68 / 0.78 |
+| Wrist height | 0.50 / 0.56 | 0.54 / 0.59 | 69% / 87% | 0.72 / 0.75 |
+| Timing | 0.49 / 0.50 | 0.50 / 0.51 | 51% / 71% | not measured |
+
+With the first scorer "dropped" was 31% to 71%. At x4 the current score drops 8 to 37 points (rotation most); timing barely moves it. Leave-match-out (build FinalM, test FinalF) gives AUC 0.49 to 0.69, the same picture.
+
+Ceiling: an oracle that already knows the faulted feature and reads its mean z over the contact window (a scratch check, not a committed script). No scorer can do better on this reference, so the plan target of AUC >= 0.8 is not reachable at these fault sizes. A 20 degree elbow change is about half the professionals' own spread (elbow std about 35 to 43 degrees). The limit is the reference (eight players mixed, broadcast pose noise), not the scoring formula.
+
+How the settings were chosen: `scripts/tune_scoring.py` splits the training 80% again (75/25) and grid-searches softness, worst mix and timing on that validation part only. Objective: mean of the fault AUCs and the own-type ordering. Softness 1.5 and 2 tied; 2 was picked because clean pro strokes then score about 84 instead of 72. The objective uses the same synthetic faults, so the held-out numbers above are tuned towards those fault types.
+
+Timing: DTW against the averaged reference does not see a 0.1 s shift (the reference curves are too blurred; against the stroke's own clean copy DTW does find it). A second measure, the time of the fastest shoulder turn relative to contact (`turn_lead`), has a professional spread of about 0.15 s around -0.13 s, so a 0.1 s fault is under one spread. Adding it did not raise the validation objective, so it is off by default (`use_timing=True` turns it on).
 
 ## 7. Pose model
 
@@ -55,11 +86,11 @@ YOLO11m-pose: 0.227 s per frame (4.4 fps, CPU), 2.02 people per frame, mean keyp
 
 ## 9. What is left
 
-1. Make the score discriminate (tune the z limit and std floor on build-set folds), then re-run.
-2. Flawed-stroke test: offset one feature of real strokes by a known amount and check the score drops and the right feature is named. Put a table and plot in this file.
+1. Score separation is now limited by the reference spread (section 6b). Options: a tighter reference (one player or one match), or judge the score on the team's own clips instead.
+2. Flawed-stroke plot for the report (the table is in 6b).
 3. Leave-players-out split. Needs a hand-labelled player map, or a leave-match-out split.
 4. Compare dataset poses with re-run YOLO poses on about 50 windows.
-5. Swing detection for phone clips, `analyze_clip`, result JSON, overlay video, FastAPI server and phone page, readable error messages.
+5. Try the phone app (built 2026-11-20) on a real padel clip and from a phone over Wi-Fi.
 6. Film consented clips (20 per stroke, 2 players), failure log, own-clip evaluation, coach ratings if possible.
 7. Count hitter accuracy on 40 windows and contact error in frames; ask a padel player to settle the 7 ambiguous forehands and check handedness.
 8. Latency measurement and a speed pass.

@@ -35,6 +35,8 @@ LABELS = {"shoulder_rotation": "Shoulder turn angle", "hip_rotation": "Hip turn 
 def feedback_text(d: Deviation) -> str:
     """One plain sentence for a deviation, e.g. 'Elbow is about 18 degrees more bent than the professionals at contact.'"""
     when = PHASE[d.phase]
+    if d.feature == "timing":
+        return f"Your trunk turn peaks about {d.size:.2f} s {d.direction} than the professionals', relative to contact."
     if d.feature == "wrist_height":
         return f"Racket wrist is about {d.size:.1f} torso lengths {d.direction} than the professionals {when}."
     n = round(d.size)
@@ -93,7 +95,7 @@ def analyze_keypoints(kp: np.ndarray, fps: float, hand: str, stroke_type: str, r
             confidence=round(min(r.coverage, frac), 2),
             feature_scores={k: round(v, 2) for k, v in r.feature_scores.items()},
             feedback=[dict(feature=d.feature, phase=d.phase, direction=d.direction, size=round(d.size, 2),
-                           unit="torso lengths" if d.feature == "wrist_height" else "degrees",
+                           unit={"wrist_height": "torso lengths", "timing": "seconds"}.get(d.feature, "degrees"),
                            text=feedback_text(d)) for d in r.deviations],
             pose_quality=dict(frames=int(end - start + 1), confident_fraction=round(frac, 2)),
         ))

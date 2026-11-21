@@ -18,7 +18,7 @@ root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root))
 from padel.faults import FAULTS, apply_fault, auc  # noqa: E402
 from padel.reference import build_reference, resample  # noqa: E402
-from padel.scoring import score_stroke  # noqa: E402
+from padel.scoring import score_stroke, timing_stats  # noqa: E402
 
 SIZES = (0.5, 1.0, 2.0, 4.0)
 NAMED = {"rotation": {"shoulder_rotation", "separation"}}  # either name counts for the rotation fault
@@ -49,8 +49,11 @@ for stroke in ("Forehand", "Backhand"):
         order = rng.permutation(len(metas))
         cut = int(0.8 * len(metas))
         train, held = [metas[i] for i in order[:cut]], [metas[i] for i in order[cut:]]
-    r = build_reference([resample(d[f"{m[0]}/feat"], int(m[6]) - int(m[8])) for m in train])
-    ref = {"mean": r["mean"], "std": r["std"], "scale": r["scale"], "names": names}
+    raw = [(d[f"{m[0]}/feat"], int(m[6]) - int(m[8])) for m in train]
+    r = build_reference([resample(*x) for x in raw])
+    r.update(timing_stats(raw, names))
+    ref = {"mean": r["mean"], "std": r["std"], "scale": r["scale"], "names": names,
+           "timing_mean": r["timing_mean"], "timing_std": r["timing_std"]}
 
     clean = {}
     for m in held:

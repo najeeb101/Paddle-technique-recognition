@@ -263,10 +263,11 @@ It is implemented by hand so each member can explain it; tests compare it with a
 1. Compute the stroke's features, resample to 60 steps with contact aligned.
 2. DTW-align it to the reference mean.
 3. For each feature `f` and aligned step `t`, `z(f, t) = (value − mean) / std`.
-4. Per-feature score: the share of steps with `|z| ≤ 2`. Steps near contact (proposal: steps 30 to 50 of 60)
-   count double.
-5. Overall score: weighted mean of the feature scores, times 100. Weights start equal and are tuned on the
-   build set only (plan day 15), never on the test set.
+4. Per-feature score: the weighted mean over steps of `exp(-0.5 (z / 2)^2)`, steps 30 to 50 of 60 counting
+   double. (First version: the share of steps with `|z| ≤ 2`; a binary limit hardly reacted to faults.)
+5. Overall score: 100 × (0.5 × mean of the feature scores + 0.5 × mean of the two lowest), so one bad feature
+   is not hidden by eight normal ones. Settings chosen on a validation split of the build set
+   (`scripts/tune_scoring.py`), never on the test set. Results in `docs/results.md` section 6b.
 6. Feedback: the three features with the lowest scores, each with the phase where the deviation is largest
    (before, at or after contact), the direction (higher or lower than the reference mean) and the size in
    the feature's own unit.
@@ -295,8 +296,9 @@ scored against both types.
 
 Every stroke scores about 94, so this score is not yet usable. Two causes: the bands are wide (the real
 spread between players plus pose noise), so almost any plausible stroke falls within 2 std, and DTW
-absorbs timing and shape differences. Planned fix: a tighter z limit and std floor chosen on folds of the
-build set, then one final run on the untouched hold-out. This hold-out has been looked at once, so the
+absorbs timing and shape differences. Update 2026-11-21: tightening the limit cannot help, because the std bands
+equal each feature's whole spread, so the scorer was made continuous instead (7.3). Held-out ordering is now
+86% / 65%; the flawed-stroke results and their ceiling are in `docs/results.md` section 6b. This hold-out has been looked at once, so the
 final numbers should come from a new split or from the team's own clips.
 
 ## 8. Phone web app

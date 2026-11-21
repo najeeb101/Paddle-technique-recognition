@@ -10,7 +10,7 @@ Given a short recording from a single fixed camera, the system:
 4. compares those features with a carefully filtered professional reference, and
 5. reports an explainable similarity score, confidence indicators, and specific deviations.
 
-> **Status:** pro-data pipeline, features, reference and scoring are built and tested; the score does not discriminate well enough yet and the phone clip analysis and web app are not built. This is a CMAI 480 (Computer Vision) group project
+> **Status:** pro-data pipeline, features, reference and scoring are built and tested; the phone app is built but not yet tried on a real clip, and the score separates flawed strokes only weakly. This is a CMAI 480 (Computer Vision) group project
 > on a 4-week schedule. The plan is Python-first with a phone web app. The instructor approved Python and AI assistance (reported verbally, 2026-11-08). See [docs/project-plan.md](docs/project-plan.md) for course
 > requirements and timeline, [docs/design.md](docs/design.md) for the planned pipeline, and
 > [docs/datasets.md](docs/datasets.md) for the data sources.
@@ -97,9 +97,9 @@ The specification and plan are in `docs/`; `docs/project-plan.md` has the full d
 - Phone app: swing detection on clips, `analyze_clip` (result JSON with failure codes), H.264 skeleton overlay, FastAPI server and phone page
 - Per-stage latency and YOLO11 size benchmark (`docs/measurements.md`); model choice explained in `docs/model-choice.md`
 
-First hold-out check: held-out strokes score about 94 against the right reference and 89-93 against the wrong one, so the score barely discriminates (61-80% correct ordering). Tuning it is next.
+Scoring (2026-11-21): held-out strokes score higher against their own type in 86% (forehand) and 65% (backhand) of cases. Flawed-stroke AUC is 0.53 to 0.64; the professionals' own spread caps it near 0.5 to 0.78 at these fault sizes (`docs/results.md` 6b).
 
-Not done: trying the phone app on a real padel clip, flawed-stroke and own-clip evaluation, failure log, report.
+Not done: trying the phone app on a real padel clip, own-clip evaluation, failure log, report.
 Still open: rights to use the professional match video, written confirmation of the instructor's approval, the phone-app vs "camera sensor connected to MATLAB" question, and a fifth member.
 
 Run: `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe matplotlib fastapi uvicorn python-multipart`, then `py -m pytest -q`.

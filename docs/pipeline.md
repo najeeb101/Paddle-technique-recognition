@@ -16,6 +16,7 @@ Setup (Windows, Python 3.14 via the `py` launcher): `py -m pip install numpy ope
 | 6 | `build_stroke_features.py` | labels dir, index | `data/processed/stroke_features.npz`, curve plots | Per stroke: window plus 10 frames each side, NaN masking, left/right fix (`fix_lr_all`), features. Prints how many strokes had swaps corrected. 342 strokes. |
 | 7 | `build_reference.py` | features npz | `reference/forehand.npz`, `backhand.npz` | Resamples, runs DTW to the medoid, averages along the paths. Excludes the 13 strokes in `docs/label-suspects.md`. |
 | 8 | `eval_holdout.py` | features npz, optional seed | printed scores | 80/20 split per type, own-type against wrong-type reference. |
+| 9b | `tune_scoring.py` | features npz, `--seed` | markdown table | Grid search of the scoring settings on a validation split of the training strokes (the hold-out is never used). |
 | 9 | `eval_flawed.py` | features npz, `--seed`, optional `--train-match FinalF` or `FinalM` | markdown tables | Flawed-stroke test: rebuilds references from training strokes only, then scores each held-out stroke and five flawed copies (elbow, knee, rotation, wrist height, timing; `padel/faults.py`) at sizes x0.5 to x4. Reports score drop, AUC and whether the feedback names the changed feature. `--train-match` gives a leave-match-out split. |
 
 Other scripts: `bench_pose.py` (YOLO11-pose vs MediaPipe), `check_lr.py` (draws keypoints by their names to settle left/right), `check_tracking.py`, `check_hitters.py`, `make_check_sheets.py` (hand-check sheets), `handedness.py` (old rule-based vote, not used), `clip_to_keypoints.py` (phone clip to cleaned keypoints), `bench_sizes.py` (YOLO11 n/s/m speed on CPU and GPU, plus the other pipeline stages), `score_check.py`. Each script's docstring gives its arguments.
@@ -68,8 +69,8 @@ Counts: 174 forehand strokes (187 minus the 13 suspects) and 155 backhand.
 
 1. Resample the stroke the same way and DTW-align it to the reference mean.
 2. z = (value - mean) / std per step and feature.
-3. Feature score: share of steps (steps 30 to 50 count double) with |z| at most 2.
-4. Overall score: mean of the feature scores times 100.
+3. Feature score: contact-weighted mean over steps (30 to 50 count double) of exp(-0.5 (z / 2)^2), so any shift lowers it a little.
+4. Overall score: 100 x (0.5 x mean of the feature scores + 0.5 x mean of the two lowest). Softness 2 and mix 0.5 were chosen by `scripts/tune_scoring.py` on training strokes only. An optional timing term (off by default) compares the time of the fastest shoulder turn relative to contact (`turn_lead`) with the professionals' spread, stored in the reference files.
 5. Feedback: the three lowest-scoring features, each with the phase (before, at, after contact), direction (higher or lower than the reference) and size in the feature's unit, taken at the step of largest |z|.
 6. `coverage`: the share of values that were measured rather than missing. A feature with no data is skipped.
 

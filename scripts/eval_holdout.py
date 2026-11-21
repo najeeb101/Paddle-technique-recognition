@@ -13,7 +13,7 @@ import numpy as np
 root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root))
 from padel.reference import build_reference, resample  # noqa: E402
-from padel.scoring import score_stroke  # noqa: E402
+from padel.scoring import score_stroke, timing_stats  # noqa: E402
 
 src = Path(sys.argv[1])
 seed = int(sys.argv[2]) if len(sys.argv) > 2 else 0
@@ -30,8 +30,11 @@ for stroke in ("Forehand", "Backhand"):
     order = rng.permutation(len(metas))
     cut = int(0.8 * len(metas))
     train, held = [metas[i] for i in order[:cut]], [metas[i] for i in order[cut:]]
-    r = build_reference([resample(d[f"{m[0]}/feat"], int(m[6]) - int(m[8])) for m in train])
-    refs[stroke] = {"mean": r["mean"], "std": r["std"], "scale": r["scale"], "names": names}
+    raw = [(d[f"{m[0]}/feat"], int(m[6]) - int(m[8])) for m in train]
+    r = build_reference([resample(*x) for x in raw])
+    r.update(timing_stats(raw, names))
+    refs[stroke] = {"mean": r["mean"], "std": r["std"], "scale": r["scale"], "names": names,
+                    "timing_mean": r["timing_mean"], "timing_std": r["timing_std"]}
     test[stroke] = held
     print(f"{stroke}: train {len(train)}, held-out {len(held)}")
 

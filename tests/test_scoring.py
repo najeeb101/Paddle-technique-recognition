@@ -57,3 +57,36 @@ def test_missing_feature_is_skipped():
     feat[:, FEATURES.index("elbow_angle")] = np.nan
     r = score_stroke(feat, c, ref)
     assert "elbow_angle" not in r.feature_scores and r.coverage < 1.0
+
+
+def test_small_offset_lowers_score_continuously():
+    ref = make_ref()
+    base = score_stroke(*stroke_from(ref), ref).score
+    small = score_stroke(*stroke_from(ref, offset=-3.0, col="elbow_angle"), ref).score
+    big = score_stroke(*stroke_from(ref, offset=-6.0, col="elbow_angle"), ref).score
+    assert base > small > big
+
+
+def test_worst_mix_weights_the_worst_feature():
+    ref = make_ref()
+    feat, c = stroke_from(ref, offset=-8.0, col="elbow_angle")
+    assert score_stroke(feat, c, ref, worst_mix=1.0).score < score_stroke(feat, c, ref, worst_mix=0.0).score
+
+
+def test_turn_lead_finds_the_fastest_turn():
+    from padel.scoring import timing_stats, turn_lead
+    names = list(FEATURES)
+    feat = np.zeros((40, len(names)))
+    feat[:, names.index("shoulder_rotation")] = 90 * np.tanh(np.arange(40) - 17.0)  # fastest turn at frame 17
+    assert turn_lead(feat, 20, names, fps=30.0) == pytest.approx(-3 / 30, abs=1 / 30)
+    feat[:, names.index("shoulder_rotation")] = np.nan
+    assert np.isnan(turn_lead(feat, 20, names))
+    stats = timing_stats([(feat, 20)] * 2 + [(stroke_from(make_ref())[0], 30)], names)
+    assert set(stats) == {"timing_mean", "timing_std"}
+
+
+def test_timing_term_used_only_when_asked():
+    ref = make_ref() | {"timing_mean": -0.1, "timing_std": 0.15}
+    feat, c = stroke_from(ref)
+    assert "timing" not in score_stroke(feat, c, ref).feature_scores
+    assert "timing" in score_stroke(feat, c, ref, use_timing=True).feature_scores
