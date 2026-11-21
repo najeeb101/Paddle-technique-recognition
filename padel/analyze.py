@@ -13,7 +13,7 @@ import numpy as np
 
 from .features import FEATURES, fix_lr_all, stroke_features
 from .scoring import Deviation, load_reference, score_stroke
-from .swings import detect_swings
+from .swings import detect_swings, swing_speed
 
 MAX_CLIP_S = 20.0
 MIN_ARM_FRACTION = 0.5   # below this a swing is not scored (proposal)
@@ -74,7 +74,7 @@ def analyze_keypoints(kp: np.ndarray, fps: float, hand: str, stroke_type: str, r
         return fail("no_person")
     kp = fix_lr_all(kp)
     feat = stroke_features(kp, hand, fps)
-    swings = detect_swings(feat[:, FEATURES.index("wrist_speed")], fps)
+    swings = detect_swings(swing_speed(kp, hand, fps), fps)
     out["n_swings_found"] = len(swings)
     if not swings:
         return fail("no_swing")

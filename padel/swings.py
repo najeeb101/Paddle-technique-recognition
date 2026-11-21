@@ -1,7 +1,24 @@
-"""Find swings in a player clip from the racket wrist's speed (design.md section 6.1)."""
+"""Find swings in a player clip from the racket wrist's speed relative to the body (design.md section 6.1)."""
 from __future__ import annotations
 
 import numpy as np
+
+from .features import L_HIP, L_SH, R_HIP, R_SH, R_WR, as_right_handed
+
+
+def swing_speed(kp: np.ndarray, hand: str, fps: float) -> np.ndarray:
+    """Racket wrist speed relative to the body centre (mid shoulders and hips), torso lengths per second.
+
+    Unlike the wrist_speed feature this ignores the player running or the camera panning, which on match video
+    lifts the clip's median speed so far that real swings fall under the peak threshold.
+    """
+    p = as_right_handed(kp, hand)
+    centre = (p[:, L_SH, :2] + p[:, R_SH, :2] + p[:, L_HIP, :2] + p[:, R_HIP, :2]) / 4
+    torso = np.linalg.norm((p[:, L_SH, :2] + p[:, R_SH, :2]) / 2 - (p[:, L_HIP, :2] + p[:, R_HIP, :2]) / 2, axis=1)
+    rel = p[:, R_WR, :2] - centre
+    out = np.full(len(p), np.nan)
+    out[1:] = np.linalg.norm(np.diff(rel, axis=0), axis=1) / torso[1:] * fps
+    return out
 
 
 def detect_swings(speed: np.ndarray, fps: float, peak_factor: float = 3.0, low_factor: float = 1.5,

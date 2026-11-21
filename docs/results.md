@@ -89,6 +89,20 @@ No own clips yet, so 8 near-side pro strokes (2 per match and type, right-handed
 - Pose time per 3 s clip on CPU (yolo11m): 31 to 162 s.
 - A reference from one match or one track position is barely tighter (elbow spread at contact 33 to 44 degrees vs 41 for both), so the spread is mostly pose noise, not player mix.
 
+## 6d. Swing detection on all 342 pro strokes (2026-11-21)
+
+`scripts/eval_swings.py` cuts every near-side stroke as a 3 s clip (contact at frame 45) from the dataset keypoints, cleans and smooths them like phone keypoints, and counts a stroke as found when a detected swing lies within 6 frames of the labelled contact. Thresholds were compared on FinalF and checked on FinalM.
+
+| Signal | Found FH / BH (FinalF) | Found FH / BH (FinalM) | Extra swings per clip |
+|---|---|---|---|
+| wrist_speed (image motion, as before) | 31.5% / 43.8% | 26.3% / 40.7% | 0.20 to 0.29 |
+| swing_speed (wrist relative to body centre) | 51.1% / 60.9% | 44.2% / 59.3% | 0.36 to 0.60 |
+
+- Cause of the misses: pros keep running and the camera pans, so the clip median of image wrist speed is high and the stroke peak sits only about 2.6x above it (median), under the 3x threshold. Measuring the wrist relative to the body centre lifts that ratio to about 4.5x.
+- `analyze_clip` now uses `swing_speed` (padel/swings.py); the `wrist_speed` feature and the references are unchanged.
+- Retuning the thresholds on FinalF did not beat the current ones on FinalM (best FinalF setting is the current one), so they stay.
+- Ceiling on this test: even the single highest peak in the clip is at contact only 55% of the time (top two peaks 68%). Pose noise on small broadcast players and other fast arm movements in the 3 s compete with the stroke, so this test understates phone clips with one player filling the frame. The extra swings may partly be real recoveries or shots. Decide final thresholds on own phone clips (docs/filming-guide.md).
+
 ## 7. Pose model
 
 YOLO11m-pose: 0.227 s per frame (4.4 fps, CPU), 2.02 people per frame, mean keypoint confidence 0.72. MediaPipe heavy: 0.140 s per frame, 0.30 people per frame. 60 frames of one broadcast clip only; MediaPipe is untested on phone footage. See [measurements.md](measurements.md).

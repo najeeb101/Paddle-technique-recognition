@@ -47,3 +47,29 @@ def test_missing_speed_values_are_tolerated():
     s = bumps(200, [100])
     s[20:25] = np.nan
     assert [c for _, c, _ in detect_swings(s, FPS)] == [100]
+
+
+def _body(T=30):
+    kp = np.zeros((T, 17, 3))
+    kp[..., 2] = 1.0
+    kp[:, 5, :2], kp[:, 6, :2] = (90, 100), (110, 100)    # shoulders
+    kp[:, 11, :2], kp[:, 12, :2] = (90, 200), (110, 200)  # hips: torso length 100
+    kp[:, 9, :2], kp[:, 10, :2] = (80, 150), (120, 150)   # wrists
+    return kp
+
+
+def test_running_player_has_no_swing_speed():
+    from padel.swings import swing_speed
+    kp = _body()
+    kp[..., 0] += np.arange(30)[:, None] * 20.0  # whole body moves 20 px per frame
+    s = swing_speed(kp, "right", 30.0)
+    assert np.isnan(s[0])
+    assert np.allclose(s[1:], 0.0)
+
+
+def test_swing_speed_follows_racket_wrist_relative_to_body():
+    from padel.swings import swing_speed
+    kp = _body()
+    kp[:, 10, 0] += np.arange(30) * 5.0  # right wrist moves 5 px per frame
+    kp[:, 9, 0] -= np.arange(30) * 50.0  # left wrist is ignored for a right-hander
+    assert np.allclose(swing_speed(kp, "right", 30.0)[1:], 5.0 / 100 * 30)
