@@ -111,6 +111,21 @@ No own clips yet, so 8 near-side pro strokes (2 per match and type, right-handed
 - Hip rotation spreads grow (FH 20.0 -> 26.7, BH 18.0 -> 25.4 deg), so separation does not improve. Cause not checked yet (hip L/R flips in the new poses are the first suspect).
 - Elbow spread is still above the 20 deg fault size, so sharper poses alone do not make faults detectable. These strokes still use the old hitter picks (section 6e), so some are the wrong player.
 
+Why hip spread grows (`scripts/check_hip_spread.py`, old-hitter files, 342 strokes):
+
+- The hip line angle jumps by more than 60 deg between frames in 141 strokes on the crops vs 82 on the dataset poses (median jump about 100 deg).
+- The jumps happen when the two hip points almost coincide: median hip width at a jump is 0.03 torso lengths on the crops. YOLO puts the hips that close in 15.6% of crop frames vs 3.9% of dataset frames (hip width median 0.34 vs 0.40 torso). The angle of a near-zero line is noise, so these are not left/right flips and the L/R fix cannot catch them.
+- The typical stroke barely changes (median per-stroke difference 4.6 deg); the extra spread is these outliers.
+- Masking hip_rotation and separation where hip width is under a threshold (spread over strokes at contact +-3 frames, crop poses):
+
+| Mask below | Hip rotation | Separation | Missing |
+|---|---|---|---|
+| none | 28.2 deg | 30.5 deg | 0% |
+| 0.10 torso | 24.5 deg | 25.9 deg | 10% |
+| 0.15 torso | 21.3 deg | 20.1 deg | 20% |
+
+With the 0.15 mask the crop hip spread matches the dataset poses (20.0 deg) and separation is tighter than on them (24.5). Cost: 20% of contact frames lose these two features. Not yet applied in `padel/features.py`; to be tested with the hold-out and flawed-stroke checks on the new crops.
+
 ## 6e. Hitter check on 40 windows (2026-11-21)
 
 The 40 random windows of `scripts/make_check_sheets.py` (20 per match, all court sides) were labelled by eye from larger strips (`scripts/make_hitter_strips.py`, 5 frames around contact) and then from full frames with the dataset ball labels drawn (`scripts/compare_hitter_rules.py`). Answers are in data/check/hitter_check.csv.
