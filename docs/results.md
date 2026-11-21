@@ -73,6 +73,22 @@ How the settings were chosen: `scripts/tune_scoring.py` splits the training 80% 
 
 Timing: DTW against the averaged reference does not see a 0.1 s shift (the reference curves are too blurred; against the stroke's own clean copy DTW does find it). A second measure, the time of the fastest shoulder turn relative to contact (`turn_lead`), has a professional spread of about 0.15 s around -0.13 s, so a 0.1 s fault is under one spread. Adding it did not raise the validation objective, so it is off by default (`use_timing=True` turns it on).
 
+## 6c. Phone app on real padel video (2026-11-21)
+
+No own clips yet, so 8 near-side pro strokes (2 per match and type, right-handed, seed 7) were cut from the broadcast video as 3 s clips (true contact at frame 45), cropped square around the hitter and scaled to 720 px, then run through `analyze_clip`. These strokes are in the reference, so scores are optimistic.
+
+| Result | First run | After the person-tracking fix |
+|---|---|---|
+| Swing found within 6 frames of contact | 3 | 3 (scores 60, 79, 88) |
+| Swing found at the wrong moment | 1 (the partner's later shot) | 0 |
+| No swing found | 4 | 5 |
+
+- Person switching: `extract_keypoints` took the largest person in each frame, so it jumped to the partner when she came nearer. It now follows the first player by box overlap (`padel/pose.py`, two new tests).
+- Swing detection is too strict for fast pro swings: the 5-frame smoothing flattens the peak, so it falls under 3x the clip median. Smoothing 3 and factor 2.5 found 6 of 8, but 8 cropped broadcast clips are too few to retune on; decide with own phone clips.
+- Tips are not reliable yet: one clip got "hip turn about 110 degrees lower" (skeleton noise on small, upscaled players).
+- Pose time per 3 s clip on CPU (yolo11m): 31 to 162 s.
+- A reference from one match or one track position is barely tighter (elbow spread at contact 33 to 44 degrees vs 41 for both), so the spread is mostly pose noise, not player mix.
+
 ## 7. Pose model
 
 YOLO11m-pose: 0.227 s per frame (4.4 fps, CPU), 2.02 people per frame, mean keypoint confidence 0.72. MediaPipe heavy: 0.140 s per frame, 0.30 people per frame. 60 frames of one broadcast clip only; MediaPipe is untested on phone footage. See [measurements.md](measurements.md).

@@ -64,24 +64,49 @@ def largest_person(boxes: np.ndarray) -> int | None:
     return int(np.argmax((b[:, 2] - b[:, 0]) * (b[:, 3] - b[:, 1])))
 
 
-def extract_keypoints(frames, detect):
-    """Run `detect(frame) -> (boxes (n,4), keypoints (n,17,3))` on every frame and keep the largest person.
+def box_iou(a: np.ndarray, boxes: np.ndarray) -> np.ndarray:
+    """Intersection over union of box `a` with each of `boxes` (all x1, y1, x2, y2)."""
+    b = np.asarray(boxes, dtype=float)
+    w = np.clip(np.minimum(a[2], b[:, 2]) - np.maximum(a[0], b[:, 0]), 0, None)
+    h = np.clip(np.minimum(a[3], b[:, 3]) - np.maximum(a[1], b[:, 1]), 0, None)
+    inter = w * h
+    area = lambda x: (x[..., 2] - x[..., 0]) * (x[..., 3] - x[..., 1])  # noqa: E731
+    return inter / np.maximum(area(a) + area(b) - inter, 1e-9)
 
-    Returns ((T,17,3) float32 keypoints, list of warnings). Frames with nobody are all missing.
+
+def extract_keypoints(frames, detect, min_iou: float = 0.1, reset_after: int = 15):
+    """Run `detect(frame) -> (boxes (n,4), keypoints (n,17,3))` on every frame and follow one person.
+
+    The player is the largest person when first seen; after that, the box that overlaps the player's last box
+    most (IoU at least `min_iou`), so the analysis does not jump to a partner or passer-by who looks bigger in
+    some frames. If the player is not found for `reset_after` frames, the largest person is taken again.
+    Returns ((T,17,3) float32 keypoints, list of warnings). Frames without the player are all missing.
     """
-    rows, n_none, n_many = [], 0, 0
+    rows, n_none, n_many, n_lost = [], 0, 0, 0
+    last, missed = None, 0
     for frame in frames:
         boxes, kps = detect(frame)
-        i = largest_person(boxes)
+        i = None
+        if len(boxes):
+            n_many += len(boxes) > 1
+            if last is None or missed >= reset_after:
+                i = largest_person(boxes)
+            else:
+                iou = box_iou(last, boxes)
+                i = int(np.argmax(iou)) if iou.max() >= min_iou else None
+                n_lost += i is None
         if i is None:
-            n_none += 1
+            n_none += not len(boxes)
+            missed += 1
             rows.append(np.tile(MISSING, (17, 1)))
         else:
-            n_many += len(boxes) > 1
+            last, missed = np.asarray(boxes[i], dtype=float), 0
             rows.append(kps[i])
     warnings = []
     if n_many:
-        warnings.append(f"more than one person in {n_many} frames; used the largest")
+        warnings.append(f"more than one person in {n_many} frames; followed the player first seen as the largest")
+    if n_lost:
+        warnings.append(f"player not found among the people detected in {n_lost} frames")
     if n_none:
         warnings.append(f"no person in {n_none} frames")
     return np.array(rows, dtype=np.float32).reshape(-1, 17, 3), warnings

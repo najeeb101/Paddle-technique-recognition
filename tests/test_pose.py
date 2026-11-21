@@ -76,3 +76,26 @@ def test_extract_keeps_the_largest_person_and_warns():
     assert np.isnan(kp[2, :, :2]).all() and (kp[2, :, 2] == 0).all()
     assert any("more than one person" in w for w in warnings)
     assert any("no person" in w for w in warnings)
+
+
+def test_extract_follows_the_same_person_when_a_bigger_one_appears():
+    player, other = walk(1, 0.9)[0], walk(1, 0.8)[0] + 1000
+    me, me_moved, partner = [0, 0, 100, 200], [5, 0, 105, 200], [300, 0, 600, 400]
+    detections = [
+        (np.array([me], float), player[None]),
+        (np.array([partner, me_moved], float), np.stack([other, player])),  # partner looks bigger
+        (np.array([partner], float), other[None]),                          # only the partner is seen
+    ]
+    kp, warnings = extract_keypoints(range(3), lambda i: detections[i])
+    assert np.allclose(kp[1], player)
+    assert np.isnan(kp[2, :, :2]).all()
+    assert any("player not found" in w for w in warnings)
+
+
+def test_extract_takes_the_largest_again_after_losing_the_player():
+    player, other = walk(1, 0.9)[0], walk(1, 0.8)[0] + 1000
+    dets = [(np.array([[0, 0, 100, 200]], float), player[None])]
+    dets += [(np.array([[300, 0, 600, 400]], float), other[None])] * 3
+    kp, _ = extract_keypoints(range(4), lambda i: dets[i], reset_after=2)
+    assert np.isnan(kp[1, :, :2]).all() and np.isnan(kp[2, :, :2]).all()
+    assert np.allclose(kp[3], other)
