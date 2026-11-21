@@ -103,6 +103,16 @@ No own clips yet, so 8 near-side pro strokes (2 per match and type, right-handed
 - Retuning the thresholds on FinalF did not beat the current ones on FinalM (best FinalF setting is the current one), so they stay.
 - Ceiling on this test: even the single highest peak in the clip is at contact only 55% of the time (top two peaks 68%). Pose noise on small broadcast players and other fast arm movements in the 3 s compete with the stroke, so this test understates phone clips with one player filling the frame. The extra swings may partly be real recoveries or shots. Decide final thresholds on own phone clips (docs/filming-guide.md).
 
+## 6e. Hitter check on 40 windows (2026-11-21)
+
+The 40 random windows of `scripts/make_check_sheets.py` (20 per match, all court sides) were labelled by eye from larger strips (`scripts/make_hitter_strips.py`, 5 frames around contact) and then from full frames with the dataset ball labels drawn (`scripts/compare_hitter_rules.py`). Answers are in data/check/hitter_check.csv.
+
+- Current rule (track with the fastest single-frame wrist jump): right in 23, wrong in 10, unclear in 7. So hitter accuracy is about 58 to 75%, not the "nearly every tile" of the first eyeball check.
+- Wrong picks are mostly a player standing in the ready position while another player hits: one keypoint jump on a still player beats the real swing. In the 23 sampled windows that feed the near-side reference, at least 5 are the wrong player, so the reference holds strokes that are not strokes, which adds to the pros' spread.
+- Ball rule ("turn"): find the frame in the window where the labelled ball changes direction most, pick the player whose wrist is nearest the ball there. It agrees with all 33 clear labels (23 right kept, 10 wrong changed). Caveat: 4 of the 10 "wrong" labels were first marked right from tight crops and corrected after seeing the ball on full frames, so this is not a fully independent test.
+- Smoothing or body-relative wrist speed alone fixed 3 to 7 of the 10.
+- Next: switch hitter inference to the ball rule, rebuild the near-side index, features and references, and rerun the hold-out and flawed-stroke tests. Phone clips are not affected (one player is followed).
+
 ## 7. Pose model
 
 YOLO11m-pose: 0.227 s per frame (4.4 fps, CPU), 2.02 people per frame, mean keypoint confidence 0.72. MediaPipe heavy: 0.140 s per frame, 0.30 people per frame. 60 frames of one broadcast clip only; MediaPipe is untested on phone footage. See [measurements.md](measurements.md).
