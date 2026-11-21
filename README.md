@@ -97,7 +97,7 @@ The specification and plan are in `docs/`; `docs/project-plan.md` has the full d
 - Phone app: swing detection on clips, `analyze_clip` (result JSON with failure codes), H.264 skeleton overlay, FastAPI server and phone page
 - Per-stage latency and YOLO11 size benchmark (`docs/measurements.md`); model choice explained in `docs/model-choice.md`
 
-Scoring (2026-11-21): held-out strokes score higher against their own type in 86% (forehand) and 65% (backhand) of cases. Flawed-stroke AUC is 0.53 to 0.64; the professionals' own spread caps it near 0.5 to 0.78 at these fault sizes (`docs/results.md` 6b).
+Scoring (2026-11-21): held-out strokes score higher against their own type in 86% (forehand) and 65% (backhand) of cases. Flawed-stroke AUC is 0.53 to 0.64; a single-feature oracle reaches only 0.47 to 0.78 at these fault sizes, so the professionals' own spread looks like the limit (`docs/results.md` 6b).
 
 Not done: trying the phone app on a real padel clip, own-clip evaluation, failure log, report.
 Still open: rights to use the professional match video, written confirmation of the instructor's approval, the phone-app vs "camera sensor connected to MATLAB" question, and a fifth member.

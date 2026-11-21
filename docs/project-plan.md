@@ -63,7 +63,7 @@ First hold-out result (80/20 stroke split, seed 0): held-out forehands score 94.
 
 | Priority | Item | Plan day |
 |---|---|---|
-| 1 | Score made continuous and tuned on a validation split (2026-11-21): ordering 86% / 65%, fault AUC 0.53 to 0.64, ceiling about 0.5 to 0.78 at these fault sizes (`docs/results.md` 6b). Next: a tighter reference, or judge on own clips | 8-9, 15 |
+| 1 | Score made continuous and tuned on a validation split (2026-11-21): ordering 86% / 65%, fault AUC 0.53 to 0.64, single-feature oracle only 0.47 to 0.78 at these fault sizes (`docs/results.md` 6b). Next: a tighter reference, or judge on own clips | 8-9, 15 |
 | 2 | Flawed-stroke test run on real data (table in `docs/results.md` 6b); plot for the report still to do | 8-9 |
 | 3 | Decide leave-players-out splits. Player identity is not tracked, so a leave-match-out split (women vs men) or a hand-labelled player map is needed | 7 |
 | 4 | Compare dataset poses with re-run YOLO poses on about 50 windows | 9-10 |
@@ -366,7 +366,7 @@ Results carry the most weight, so the evaluation protocol is fixed in week 1 and
 - [x] Which pose model: YOLO11-pose (COCO-17 output, finds the near-side players on broadcast footage; MediaPipe found almost none). Re-test MediaPipe on phone clips.
 - [x] Near-side rule: replaced the hip y >= 600 px placeholder with the v2 court homography (feet at contact, court y > 10 m); 355 windows instead of 231 (`docs/design.md` section 5).
 - [x] Left/right pose swaps: fixed in code before features (`docs/design.md` section 6.2).
-- [x] Score separation: scorer made continuous, tuned on the build set only, hold-out re-run (`docs/results.md` 6b). The AUC target of 0.8 is not reachable on this reference.
+- [x] Score separation: scorer made continuous, tuned on the build set only, hold-out re-run (`docs/results.md` 6b). The AUC target of 0.8 looks out of reach on this reference.
 - [ ] Whether `wrist_speed` enters the score (currently left out, circular).
 - [ ] Whether to keep the shoulder angle as a feature, since the literature shows it is the least reliable joint
   from 2D.

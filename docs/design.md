@@ -298,7 +298,7 @@ Every stroke scores about 94, so this score is not yet usable. Two causes: the b
 spread between players plus pose noise), so almost any plausible stroke falls within 2 std, and DTW
 absorbs timing and shape differences. Update 2026-11-21: tightening the limit cannot help, because the std bands
 equal each feature's whole spread, so the scorer was made continuous instead (7.3). Held-out ordering is now
-86% / 65%; the flawed-stroke results and their ceiling are in `docs/results.md` section 6b. This hold-out has been looked at once, so the
+86% / 65%; the flawed-stroke results and a single-feature oracle baseline are in `docs/results.md` section 6b. This hold-out has been looked at once, so the
 final numbers should come from a new split or from the team's own clips.
 
 ## 8. Phone web app
