@@ -16,6 +16,10 @@ FEATURES = (
     "wrist_height", "wrist_speed",
 )
 
+# hip_rotation and separation are NaN where the hips are closer than this many torso lengths: the angle of a
+# near-zero hip line is noise (results.md 6d2, 6f). None = no mask.
+MIN_HIP_WIDTH: float | None = 0.15
+
 # COCO-17 index of each joint after a left/right swap.
 _SWAP = [0, 2, 1, 4, 3, 6, 5, 8, 7, 10, 9, 12, 11, 14, 13, 16, 15]
 
@@ -136,15 +140,23 @@ def unwrap(deg: np.ndarray) -> np.ndarray:
     return out
 
 
-def stroke_features(kp: np.ndarray, hand: str, fps: float) -> np.ndarray:
-    """(T,17,3) keypoints of one player -> (T, len(FEATURES)) features, columns in FEATURES order."""
+def stroke_features(kp: np.ndarray, hand: str, fps: float, min_hip_width: float | None = MIN_HIP_WIDTH) -> np.ndarray:
+    """(T,17,3) keypoints of one player -> (T, len(FEATURES)) features, columns in FEATURES order.
+
+    With `min_hip_width`, hip_rotation and separation are NaN where the hip keypoints are closer than that many
+    torso lengths."""
     p = as_right_handed(kp, hand)
     mid_sh = (p[:, L_SH] + p[:, R_SH]) / 2
     mid_hip = (p[:, L_HIP] + p[:, R_HIP]) / 2
     torso = np.linalg.norm(mid_sh - mid_hip, axis=1)
 
     sh_rot = unwrap(direction(p[:, L_SH], p[:, R_SH]))
-    hip_rot = unwrap(direction(p[:, L_HIP], p[:, R_HIP]))
+    hip_dir = direction(p[:, L_HIP], p[:, R_HIP])
+    if min_hip_width is not None:
+        with np.errstate(invalid="ignore"):
+            narrow = np.linalg.norm(p[:, R_HIP, :2] - p[:, L_HIP, :2], axis=1) / torso < min_hip_width
+        hip_dir = np.where(narrow, np.nan, hip_dir)
+    hip_rot = unwrap(hip_dir)
     lean_vec = mid_sh - mid_hip
     speed = np.full(len(p), np.nan)
     speed[1:] = np.linalg.norm(np.diff(p[:, R_WR], axis=0), axis=1) / torso[1:] * fps

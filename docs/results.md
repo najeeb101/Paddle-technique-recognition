@@ -152,6 +152,22 @@ The 40 random windows of `scripts/make_check_sheets.py` (20 per match, all court
 - Clean hitters fix stroke-type separation but not fault detection: a realistic fault still moves the score by 0.3 to 2.9 points. The limit there is pose noise (sections 6b, 6d2), not wrong players.
 - The zoomed re-pose (6d2) used the old hitters; a re-run on the new 259 strokes would combine both gains.
 
+## 6f. Which poses to build the reference from (2026-11-21)
+
+Three setups on the same 259 strokes (ball hitter rule): dataset poses; zoomed YOLO re-pose (`repose_strokes.py`; 209 crops reused from the earlier run where the hitter did not change, 50 new); zoomed plus the hip mask (hip_rotation and separation NaN where hip width < 0.15 torso; 17.5% of frames).
+
+| Test | Dataset poses | Zoomed | Zoomed + hip mask |
+|---|---|---|---|
+| Hold-out own type higher, FH (mean of seeds 0-4, range) | 97% (88-100) | 96% (88-100) | 96% (88-100) |
+| Hold-out own type higher, BH | 92% (85-96) | 90% (81-100) | 89% (77-100) |
+| Own minus wrong type score, FH / BH | 14.7 / 12.0 | 13.9 / 9.4 | 14.6 / 9.5 |
+| Flawed-stroke AUC at x1 (all faults) | 0.50-0.65 | 0.50-0.64 | 0.49-0.67 |
+| Backhand rotation fault: AUC / feedback names it | 0.61 / 81% | 0.56 / 85% | 0.67 / 100% |
+
+- The setups tie within the split-to-split range. These tests score pro strokes against a reference from the same pose source, so they cannot show the gain of matching the phone app's pose model (YOLO on a player who fills the frame).
+- Decision: the shipped references (`reference/*.npz`) are now built from the zoomed, masked poses, and `MIN_HIP_WIDTH = 0.15` is the default in `padel/features.py`, so phone clips get the same mask. Revisit with own phone clips; the dataset-pose features stay in `data/processed/stroke_features.npz`.
+- Fault detection is still weak in every setup (a realistic fault moves the score 0.1 to 4.1 points).
+
 ## 7. Pose model
 
 YOLO11m-pose: 0.227 s per frame (4.4 fps, CPU), 2.02 people per frame, mean keypoint confidence 0.72. MediaPipe heavy: 0.140 s per frame, 0.30 people per frame. 60 frames of one broadcast clip only; MediaPipe is untested on phone footage. See [measurements.md](measurements.md).

@@ -113,3 +113,15 @@ def test_fix_lr_all_repairs_hips_flipped_alone():
     flipped[3:6] = swap_lr(kp[3:6], (11, 12, 13, 14, 15, 16))
     assert not np.allclose(flipped, kp)
     assert np.allclose(fix_lr_all(flipped), kp)
+
+
+def test_hip_mask_blanks_collapsed_hips_only():
+    kp = standing(T=2)
+    kp[1, 12, 0] = kp[1, 11, 0] + 0.01  # hips almost on top of each other in frame 1
+    kp[1, 12, 1] = kp[1, 11, 1]
+    f = stroke_features(kp, "right", fps=30, min_hip_width=0.15)
+    h, s = FEATURES.index("hip_rotation"), FEATURES.index("separation")
+    assert np.isfinite(f[0, h]) and np.isfinite(f[0, s])
+    assert np.isnan(f[1, h]) and np.isnan(f[1, s])
+    assert np.isfinite(f[1, FEATURES.index("shoulder_rotation")])
+    assert np.isfinite(stroke_features(kp, "right", fps=30, min_hip_width=None)[1, h])

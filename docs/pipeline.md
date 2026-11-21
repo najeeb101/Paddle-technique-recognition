@@ -1,8 +1,8 @@
 # Pipeline guide
 
-How the code turns the PadelTracker100 labels into a reference and a score, step by step. Status as of 2026-11-18. Design intent is in [design.md](design.md); numbers are in [measurements.md](measurements.md) and [results.md](results.md).
+How the code turns the PadelTracker100 labels into a reference and a score, step by step. Status as of 2026-11-21. Design intent is in [design.md](design.md); numbers are in [measurements.md](measurements.md) and [results.md](results.md).
 
-Setup (Windows, Python 3.14 via the `py` launcher): `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe matplotlib fastapi uvicorn python-multipart`, plus ffmpeg on the PATH for the H.264 overlay. The dataset lives outside the repo (`C:\Users\ACER\datasets\padeltracker100\extracted`, labels in `labels/`); `data/` is git-ignored. Tests: `py -m pytest -q` (62 pass).
+Setup (Windows, Python 3.14 via the `py` launcher): `py -m pip install numpy opencv-python pytest scipy ultralytics mediapipe matplotlib fastapi uvicorn python-multipart`, plus ffmpeg on the PATH for the H.264 overlay. The dataset lives outside the repo (`C:\Users\ACER\datasets\padeltracker100\extracted`, labels in `labels/`); `data/` is git-ignored. Tests: `py -m pytest -q` (83 pass).
 
 ## Steps in run order
 
@@ -14,12 +14,14 @@ Setup (Windows, Python 3.14 via the `py` launcher): `py -m pip install numpy ope
 | 4 | `make_hand_sheets.py` | video, index | contact sheets plus a CSV to fill in | Four frames per window (contact -6, -3, 0, +3), no keypoints drawn, so the racket hand is read from the racket alone. |
 | 5 | `apply_hand_labels.py` | index, filled CSV | updated index | Replaces `handed` with the eye label; the old value stays as `handed_rule`. `?` windows get an empty `handed` and are skipped later. After the ball rule, eye labels were kept only where the hitter did not change; the 26 changed women's windows were labelled again (`data/check/hand_changed/`), and the 29 changed men's windows set to R (all 186 men's eye labels are R). |
 | 6 | `build_stroke_features.py` | labels dir, index | `data/processed/stroke_features.npz`, curve plots | Per stroke: window plus 10 frames each side, NaN masking, left/right fix (`fix_lr_all`), features. Prints how many strokes had swaps corrected. 259 strokes (342 with the old hitter rule). |
-| 7 | `build_reference.py` | features npz | `reference/forehand.npz`, `backhand.npz` | Resamples, runs DTW to the medoid, averages along the paths. Excludes the 13 strokes in `docs/label-suspects.md`. |
+| 6b | `repose_strokes.py` | features npz, video dir, YOLO weights | `data/processed/stroke_features_crop.npz` | Re-runs YOLO11m-pose on a 640 px crop around each hitter, like a phone clip, and recomputes features. Caches per stroke in `<out>.parts/` (crops of strokes whose hitter did not change can be copied over from an earlier run). About 15 s per stroke on CPU. |
+| 6c | `refeature.py` | features npz, `--min-hip-width` | features npz | Recomputes features from stored keypoints, for comparing feature settings on the same strokes. |
+| 7 | `build_reference.py` | features npz | `reference/forehand.npz`, `backhand.npz` | Resamples, runs DTW to the medoid, averages along the paths. Excludes the 13 strokes in `docs/label-suspects.md`. Since 2026-11-21 the shipped references are built from `stroke_features_crop_mask.npz` (zoomed YOLO poses, hip mask 0.15), to match what the phone app sees. |
 | 8 | `eval_holdout.py` | features npz, optional seed | printed scores | 80/20 split per type, own-type against wrong-type reference. |
 | 9b | `tune_scoring.py` | features npz, `--seed` | markdown table | Grid search of the scoring settings on a validation split of the training strokes (the hold-out is never used). |
 | 9 | `eval_flawed.py` | features npz, `--seed`, optional `--train-match FinalF` or `FinalM` | markdown tables | Flawed-stroke test: rebuilds references from training strokes only, then scores each held-out stroke and five flawed copies (elbow, knee, rotation, wrist height, timing; `padel/faults.py`) at sizes x0.5 to x4. Reports score drop, AUC and whether the feedback names the changed feature. `--train-match` gives a leave-match-out split. |
 
-Other scripts: `bench_pose.py` (YOLO11-pose vs MediaPipe), `check_lr.py` (draws keypoints by their names to settle left/right), `check_tracking.py`, `check_hitters.py`, `make_check_sheets.py` (hand-check sheets), `handedness.py` (old rule-based vote, not used), `clip_to_keypoints.py` (phone clip to cleaned keypoints), `bench_sizes.py` (YOLO11 n/s/m speed on CPU and GPU, plus the other pipeline stages), `score_check.py`. Each script's docstring gives its arguments.
+Other scripts: `bench_pose.py` (YOLO11-pose vs MediaPipe), `check_lr.py` (draws keypoints by their names to settle left/right), `check_tracking.py`, `check_hitters.py`, `make_check_sheets.py` (hand-check sheets), `handedness.py` (old rule-based vote, not used), `clip_to_keypoints.py` (phone clip to cleaned keypoints), `bench_sizes.py` (YOLO11 n/s/m speed on CPU and GPU, plus the other pipeline stages), `score_check.py`, `eval_swings.py` (swing detector on all pro strokes as 3 s clips), `make_hitter_strips.py` and `compare_hitter_rules.py` (hitter check), `compare_spread.py`, `check_hip_spread.py`. Each script's docstring gives its arguments.
 
 Gotchas: use `py`, not `python`; Python needs `C:/...` style paths where Git Bash shows `/c/...`; step 6 and 7 take tens of seconds to minutes, so run them in the background.
 
