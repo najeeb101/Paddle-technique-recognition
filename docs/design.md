@@ -223,8 +223,9 @@ about 17 degrees. A user clip filmed from behind needs the same fix.
 ### 6.3 Player selection on user clips
 
 - One person in view: use them.
-- More than one: pick the person with the largest box, and show a warning. The user is told to film one
-  player at a time.
+- More than one: start with the person with the largest box, then follow that same person by box overlap
+  (2026-11-21: picking the largest box in every frame jumped to a partner who came closer). Show a warning;
+  the user is told to film one player at a time.
 
 ### 6.4 Tracking pro players (offline)
 
@@ -317,7 +318,7 @@ final numbers should come from a new split or from the team's own clips.
 | Condition | Message idea |
 |---|---|
 | No person found | "No player detected. Step back so your whole body is visible." |
-| Several people | "More than one person detected. Using the largest; film one player." |
+| Several people | "More than one person detected. Following the first player seen; film one player." |
 | No swing detected | "No stroke found. Make sure the swing is inside the clip." |
 | Clip too long | "Clip is over 20 seconds. Trim to one or two strokes." |
 | Low pose quality | "Pose tracking was unreliable on this clip (X% of frames). Result may be wrong." |

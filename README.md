@@ -71,6 +71,7 @@ docs/
   results.md        every finding so far, failures, and what is left
   label-suspects.md forehand labels that look wrong
   model-choice.md   why YOLO11-pose and COCO-17, alternatives, evidence
+  filming-guide.md  on-court checklist and clips.csv template for our own clips
 padel/              pipeline package; scripts/ and tests/ alongside; reference/ holds the built references
 ```
 
