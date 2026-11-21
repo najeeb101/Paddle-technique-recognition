@@ -103,6 +103,14 @@ No own clips yet, so 8 near-side pro strokes (2 per match and type, right-handed
 - Retuning the thresholds on FinalF did not beat the current ones on FinalM (best FinalF setting is the current one), so they stay.
 - Ceiling on this test: even the single highest peak in the clip is at contact only 55% of the time (top two peaks 68%). Pose noise on small broadcast players and other fast arm movements in the 3 s compete with the stroke, so this test understates phone clips with one player filling the frame. The extra swings may partly be real recoveries or shots. Decide final thresholds on own phone clips (docs/filming-guide.md).
 
+## 6d2. Zoomed re-pose of the pro strokes (2026-11-21)
+
+`scripts/repose_strokes.py` re-ran YOLO11m-pose on a square crop around the hitter of every near-side stroke, scaled to 640 px like a phone clip (342 strokes, about 1.5 h on CPU), then cleaned and smoothed like phone keypoints. `scripts/compare_spread.py` (median per-step std over the contact window):
+
+- Arm and knee spreads shrink: forehand elbow 41.9 -> 32.6 deg, knees 12 to 20% lower; backhand shoulder angle 36.1 -> 21.8, shoulder rotation 44.2 -> 25.8 deg. Missing values drop (elbow 10-13% -> 8-9%).
+- Hip rotation spreads grow (FH 20.0 -> 26.7, BH 18.0 -> 25.4 deg), so separation does not improve. Cause not checked yet (hip L/R flips in the new poses are the first suspect).
+- Elbow spread is still above the 20 deg fault size, so sharper poses alone do not make faults detectable. These strokes still use the old hitter picks (section 6e), so some are the wrong player.
+
 ## 6e. Hitter check on 40 windows (2026-11-21)
 
 The 40 random windows of `scripts/make_check_sheets.py` (20 per match, all court sides) were labelled by eye from larger strips (`scripts/make_hitter_strips.py`, 5 frames around contact) and then from full frames with the dataset ball labels drawn (`scripts/compare_hitter_rules.py`). Answers are in data/check/hitter_check.csv.
