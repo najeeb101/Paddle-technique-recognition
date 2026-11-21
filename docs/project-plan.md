@@ -42,9 +42,9 @@ Python pipeline from pro data to a score exists and is tested (62 tests, `py -m 
 | Day 2 tracker | Done, but track IDs are not players | `padel/tracking.py` |
 | Day 3-4 hitter, contact frame | Done, eyeballed only; hitter accuracy and contact error in frames not counted | `padel/strokes.py`, `scripts/infer_hitters.py` |
 | Day 3 handedness | Done by eye on contact sheets (311 R, 31 L, 13 unclear), replacing rules that scored 60-64% | `scripts/make_hand_sheets.py`, `apply_hand_labels.py` |
-| Day 4 near-side filter | Done with the v2 court homography: 355 of 575 windows (194 FH, 161 BH) | `padel/court.py` |
+| Day 4 near-side filter | Done with the v2 court homography: 269 of 575 windows with the ball hitter rule (355 with the old rule) | `padel/court.py` |
 | Pose model | YOLO11m-pose chosen from a benchmark | `docs/measurements.md` |
-| Day 5 features and curves | Done: 10 features, curves coherent after the left/right fix, 342 strokes | `padel/features.py`, `scripts/build_stroke_features.py` |
+| Day 5 features and curves | Done: 10 features, curves coherent after the left/right fix, 259 strokes (342 before the ball hitter rule) | `padel/features.py`, `scripts/build_stroke_features.py` |
 | Left/right pose swaps | Fixed: the model swaps sides mid-stroke, shoulders and hips separately (127 of 342 strokes touched) | `fix_lr_all` in `padel/features.py` |
 | Forehand label check | Done: 13 of 187 forehands flagged, excluded from the reference | `docs/label-suspects.md` |
 | Day 6-7 DTW, resampling, medoid reference | Done: 174 forehand and 155 backhand strokes, 60 steps, contact at step 40 | `padel/reference.py`, `reference/*.npz` |

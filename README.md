@@ -90,7 +90,7 @@ The specification and plan are in `docs/`; `docs/project-plan.md` has the full d
 
 - PadelTracker100 loaders and stroke-window grouping (575 windows: 293 forehand, 282 backhand)
 - A position-based four-player tracker; per-window hitter and contact frame
-- Court homography near-side filter (355 usable windows: 194 forehand, 161 backhand)
+- Hitter picked from the labelled ball (old fastest-wrist rule was wrong in about a third of windows) and court homography near-side filter (259 usable strokes: 131 forehand, 128 backhand)
 - Handedness labelled by eye (311 right, 31 left, 13 unclear); 13 suspect forehand labels recorded in `docs/label-suspects.md`
 - Pose model chosen (YOLO11-pose, `docs/measurements.md`); phone clip pose extraction with cleaning, gap filling and smoothing
 - Ten per-frame features, with a fix for the pose model's mid-stroke left/right swaps

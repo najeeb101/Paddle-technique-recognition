@@ -23,9 +23,9 @@ Decision: use YOLO11-pose as the main model for the pro footage. Re-test MediaPi
 | Item | Value |
 |---|---|
 | Stroke windows | 575 (293 forehand, 282 backhand) |
-| Near-side by court homography | 355 (194 forehand, 161 backhand); old hip-y rule 231 |
+| Near-side by court homography | 269 with the ball hitter rule; 355 (194 FH, 161 BH) with the old wrist rule; old hip-y rule 231 |
 | Handedness labels | 311 R, 31 L, 13 unclear; rules scored 60% and 64% against them |
-| Strokes with features | 342 (187 forehand, 155 backhand) |
+| Strokes with features | 259 (131 forehand, 128 backhand); 342 with the old hitter rule |
 | Strokes with a left/right swap corrected | 127 of 342; 9 strokes (10 frames) still show a hip flip |
 | Missing share per feature | elbow angle 11.8%, wrist height 10.5%, wrist speed 17.4%, shoulder angle 4.0%, others under 2% |
 | Reference | 174 forehand and 155 backhand strokes, 60 steps, contact at step 40; build time about 50 s |

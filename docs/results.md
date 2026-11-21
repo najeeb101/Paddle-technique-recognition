@@ -119,7 +119,23 @@ The 40 random windows of `scripts/make_check_sheets.py` (20 per match, all court
 - Wrong picks are mostly a player standing in the ready position while another player hits: one keypoint jump on a still player beats the real swing. In the 23 sampled windows that feed the near-side reference, at least 5 are the wrong player, so the reference holds strokes that are not strokes, which adds to the pros' spread.
 - Ball rule ("turn"): find the frame in the window where the labelled ball changes direction most, pick the player whose wrist is nearest the ball there. It agrees with all 33 clear labels (23 right kept, 10 wrong changed). Caveat: 4 of the 10 "wrong" labels were first marked right from tight crops and corrected after seeing the ball on full frames, so this is not a fully independent test.
 - Smoothing or body-relative wrist speed alone fixed 3 to 7 of the 10.
-- Next: switch hitter inference to the ball rule, rebuild the near-side index, features and references, and rerun the hold-out and flawed-stroke tests. Phone clips are not affected (one player is followed).
+- Phone clips are not affected (one player is followed).
+
+### Rebuild with the ball rule (2026-11-21)
+
+`infer_hitters.py --ball` (padel/strokes.py `analyse_window_ball`): 570 of 575 windows get a ball turn, 5 fall back to wrist speed or find no hitter. The hitter changes in 191 of 575 windows (33%). Contact stays the racket wrist's speed peak; it is within 4 frames of the ball turn at the median, 10 frames at the 90th percentile.
+
+- Racket hand from the nearest wrist to the ball agrees with the eye labels in only 154 of 209 windows (74%), so it is not used. Eye labels are kept where the hitter did not change; the 26 changed near-side women's windows were labelled again by eye (6 L, all dark kit; 5 unclear, dropped); the 29 changed men's windows are R (all 186 men's eye labels are R).
+- Near side: 269 windows (was 355); 259 usable with a known hand (131 FH, 128 BH; was 342). References: 125 FH (13 label suspects excluded as before), 128 BH. Old files kept as data/*_wristrule.csv and data/processed/stroke_features_wristrule.npz.
+
+| Test | Old hitter rule | Ball hitter rule |
+|---|---|---|
+| Hold-out, own type scores higher (FH / BH) | 86% / 65% | 100% / 85% |
+| Hold-out own-type mean (FH / BH) | about 85 | 87.3 / 84.6 (wrong type 70.9 / 75.0) |
+| Flawed-stroke AUC at x1 | 0.53 to 0.64 | 0.50 to 0.65 |
+
+- Clean hitters fix stroke-type separation but not fault detection: a realistic fault still moves the score by 0.3 to 2.9 points. The limit there is pose noise (sections 6b, 6d2), not wrong players.
+- The zoomed re-pose (6d2) used the old hitters; a re-run on the new 259 strokes would combine both gains.
 
 ## 7. Pose model
 

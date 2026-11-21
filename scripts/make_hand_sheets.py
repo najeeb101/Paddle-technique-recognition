@@ -39,6 +39,8 @@ def crop(img, kp):
 tiles = []
 for match in ("FinalF", "FinalM"):
     mine = [r for r in rows if r["match"] == match]
+    if not mine:
+        continue
     poses, _ = load_poses(ext / "labels" / f"2022_BCN_{match}_1_pose.json", NAMES_TRUSTED[match])
     tracks = track_players({f: v for f, v in poses.items() if f <= max(int(r["end"]) for r in mine) + 5})
     cap = cv2.VideoCapture(str(ext / f"2022_BCN_{match}_1.mp4"))
