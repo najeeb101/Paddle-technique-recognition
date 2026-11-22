@@ -37,4 +37,6 @@ p1_fh_011.mp4,2026-11-24,P1,right,forehand,fault,no_shoulder_turn,1.6,6,said fau
 ## After the session
 
 - Copy the videos to the team's private drive; do not commit them.
-- Run each clip through the app (`py -m padel.server`, or `analyze_clip`) and note any "no swing found" results: the swing detector is still too strict for fast swings, and these clips are what we tune it on.
+- Run the whole folder in one go: `py scripts/eval_own_clips.py <folder with the videos and clips.csv> --weights <path to yolo11m-pose.pt> --overlay`. It writes `data/own_clips/summary.md` (swings found, failures, good vs fault scores, whether named faults show up in the feedback, a swing-threshold sweep, one row per clip) and skeleton videos in `data/own_clips/overlays/`. Pose is cached, so re-runs after a code change take seconds.
+- Watch a few overlay videos: the script cannot check that the swing it found is the stroke (no contact frame is labelled).
+- Then try a few clips from a phone through the app (`py -m padel.server`) to check upload and playback.
